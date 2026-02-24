@@ -10,6 +10,6 @@ Kelompok **Procrastinator**
 
 | jabatan        | nama  | nim                |
 | -------------- | ----- | ------------------ |
-| Ketua Kelompok |       |
+| Ketua Kelompok | Desi D Simamora  |23/514990/TK/56564
 | Anggota 1      | Harun | 23/514148/TK/56466 |
 | Anggota 2      | Maritza Vania Adelia     | 23/517643/TK/56944
