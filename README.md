@@ -8,8 +8,8 @@ memberikan actionable insights tentang korelasi antara habits dan productivity.
 
 Kelompok **Procrastinator**
 
-| jabatan        | nama | nim |
-| -------------- | ---- | --- |
-| Ketua Kelompok |      |
-| Anggota 1      |      |
-| Anggota 2      |      |
+| jabatan        | nama  | nim                |
+| -------------- | ----- | ------------------ |
+| Ketua Kelompok |       |
+| Anggota 1      | Harun | 23/514148/TK/56466 |
+| Anggota 2      |       |
