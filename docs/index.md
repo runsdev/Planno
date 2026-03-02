@@ -2,7 +2,7 @@
 
 **Project Senior Project TI**
 
-**Departemen Teknologi Elektro dan Teknologi Informasi, Fakultas Teknik, Universitas Gadjah Mada**
+**Departemen Teknik Elektro dan Teknologi Informasi, Fakultas Teknik, Universitas Gadjah Mada**
 
 ---
 
