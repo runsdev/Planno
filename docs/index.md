@@ -149,3 +149,9 @@ Permasalahan tersebut tidak hanya berdampak pada produktivitas, tetapi juga berk
 - Tidak ada smart notifications atau reminders berdasarkan perilaku pengguna
 
 **Key Competitive Advantage:** Fleksibel untuk mengorganisasi berbagai macam informasi dengan customizable database dan linking.
+
+---
+
+## Selanjutnya
+
+- [Metodologi SDLC & Perancangan](sdlc.md)
