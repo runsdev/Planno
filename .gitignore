@@ -1,0 +1,12 @@
+# API Keys - jangan pernah di-commit
+.env
+
+# Virtual environment - tidak perlu di-upload
+venv/
+
+# File cache Python
+__pycache__/
+*.pyc
+
+# Jupyter checkpoint
+.ipynb_checkpoints/
