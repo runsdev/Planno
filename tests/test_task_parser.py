@@ -48,8 +48,8 @@ def test_parse_kategori_work():
 
 
 def test_parse_kategori_health():
-    """Input olahraga harus kategori health"""
-    hasil = parser.parse("olahraga 30 menit")
+    """Input olahraga atau dokter harus kategori health"""
+    hasil = parser.parse("jadwal periksa ke dokter besok jam 9")
     assert hasil["success"] == True
     assert hasil["category"] == "health"
 
