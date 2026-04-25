@@ -63,7 +63,6 @@ export default function SettingsPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    setTimeout(() => setIsSubmitting(false), 1000);
     // Simulasi API call
     setTimeout(() => {
       setIsSubmitting(false);
@@ -77,21 +76,25 @@ export default function SettingsPage() {
       style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
     >
       {/* ── Decorative flowers ── */}
-      {/* Top Right */}
-      <div className="absolute -top-15 -right-15 pointer-events-none z-0">
-        <Flower size={400} fill="#fce4e4" rotate={30} />
-      </div>
-      <div className="absolute top-10 right-44 pointer-events-none z-10">
-        <Flower size={100} fill="#d1ecf1" rotate={65} />
-      </div>
+        {/* Top-right: large pink flower */}
+        <div className="absolute -top-15 -right-15 pointer-events-none z-0">
+            <Flower size={400} fill="#fce4e4" rotate={30} />
+        </div>
 
-      {/* Bottom Left */}
-      <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
-        <Flower size={400} fill="#fce4e4" rotate={30} />
-      </div>
-      <div className="absolute bottom-16 left-48 pointer-events-none z-10">
-        <Flower size={100} fill="#d1ecf1" rotate={65} />
-      </div>
+        {/* Top-right: small blue flower */}
+        <div className="absolute top-7.5 right-80 pointer-events-none z-10">
+            <Flower size={100} fill="#d1ecf1" rotate={65} />
+        </div>
+
+        {/* Bottom-left: large pink flower */}
+        <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
+            <Flower size={400} fill="#fce4e4" rotate={30}  />
+        </div>
+
+        {/* Bottom-left: small blue flower */}
+        <div className="absolute bottom-7.5 left-80 pointer-events-none z-10">
+            <Flower size={100} fill="#d1ecf1" rotate={65} />
+        </div>
 
       {/* ── Navbar ── */}
       {/* Fixed: Menghapus props activeView dan onViewChange karena tidak ada di definisi Navbar */}
