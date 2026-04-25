@@ -82,13 +82,12 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
         onChange={(val) => onChange("taskType", val)}
       />
 
-      {/* Bug fix: button styling sebelumnya bg-[#5d5d5a] text-white → original bg-[#d8dfe9] text-[#212121] */}
       <div>
         <button
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="h-[31.5px] px-[18px] bg-[#d8dfe9] rounded-[10.5px] text-[12.25px] font-semibold text-[#212121] hover:bg-[#c5cedd] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-[31.5px] px-3.5 bg-[#d8dfe9] rounded-[10.5px] text-[12.25px] font-semibold text-[#212121] hover:bg-[#c5cedd] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Menyimpan..." : "Simpan Preferensi"}
         </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Navbar } from "@/components/layout/navbar";
 import {
   Search,
   Kanban,
@@ -599,60 +600,10 @@ export default function KanbanPage() {
       style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
     >
       {/* ── Navbar ── */}
-      <header className="h-[50px] bg-[#f8f6f5] border-b border-[rgba(93,93,90,0.7)] flex items-center px-6 shrink-0 gap-4">
-        {/* Logo */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="relative flex items-center justify-center w-[26px] h-[26px]">
-            <div className="absolute inset-0 rounded-[15px] bg-[#5d5d5a]/10" />
-            <Kanban className="w-4 h-4 text-[#5d5d5a] relative z-10" />
-          </div>
-          <span className="text-[18px] font-bold italic text-[#5d5d5a]">
-            planno
-          </span>
-        </div>
-
-        {/* Center Nav */}
-        <div className="flex-1 flex items-center justify-center gap-1">
-          {(["Kanban", "Calendar"] as const).map((view) => (
-            <button
-              key={view}
-              onClick={() => setActiveView(view)}
-              className={`flex items-center gap-1.5 px-[10px] py-[10px] text-[14px] font-semibold transition-colors cursor-pointer ${
-                activeView === view
-                  ? "text-[#5d5d5a]"
-                  : "text-[rgba(93,93,90,0.7)]"
-              }`}
-            >
-              {view === "Kanban" ? (
-                <Kanban className="w-5 h-5" />
-              ) : (
-                <Calendar className="w-5 h-5" />
-              )}
-              {view}
-            </button>
-          ))}
-        </div>
-
-        {/* Right actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <NavIconBtn>
-            <Search className="w-[19px] h-[19px] text-[#5d5d5a]" />
-          </NavIconBtn>
-          <button className="flex items-center gap-2 bg-[#5d5d5a] text-[#f8f6f5] rounded-[6px] px-5 h-9 text-[14px] font-semibold hover:bg-[#4a4a47] transition-colors cursor-pointer shrink-0">
-            <PenLine className="w-5 h-5" />
-            Tambah
-          </button>
-          <NavIconBtn>
-            <Timer className="w-6 h-6 text-[#5d5d5a]" />
-          </NavIconBtn>
-          <NavIconBtn>
-            <Settings className="w-[23px] h-[23px] text-[#5d5d5a]" />
-          </NavIconBtn>
-          <button className="flex items-center justify-center cursor-pointer">
-            <User className="w-[26px] h-[26px] text-[#5d5d5a]" />
-          </button>
-        </div>
-      </header>
+      <Navbar
+        activeView={activeView}
+        onViewChange={setActiveView}
+      />
 
       {/* ── Filter Bar (Kanban only) ── */}
       {activeView === "Kanban" && (

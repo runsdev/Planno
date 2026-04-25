@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Kanban, User } from "lucide-react";
+import { Navbar } from "@/components/layout/navbar";
 import { ProfileCard } from "@/components/profile/profileCard";
 import { SettingsForm } from "@/components/ui/settingsForm";
 
@@ -64,6 +64,11 @@ export default function SettingsPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setTimeout(() => setIsSubmitting(false), 1000);
+    // Simulasi API call
+    setTimeout(() => {
+      setIsSubmitting(false);
+      alert("Pengaturan berhasil disimpan!");
+    }, 1000);
   };
 
   return (
@@ -72,46 +77,36 @@ export default function SettingsPage() {
       style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
     >
       {/* ── Decorative flowers ── */}
+      {/* Top Right */}
       <div className="absolute -top-15 -right-15 pointer-events-none z-0">
         <Flower size={400} fill="#fce4e4" rotate={30} />
       </div>
-      <div className="absolute top-7.5 right-80 pointer-events-none z-10">
+      <div className="absolute top-10 right-44 pointer-events-none z-10">
         <Flower size={100} fill="#d1ecf1" rotate={65} />
       </div>
+
+      {/* Bottom Left */}
       <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
         <Flower size={400} fill="#fce4e4" rotate={30} />
       </div>
-      <div className="absolute bottom-7.5 left-80 pointer-events-none z-10">
+      <div className="absolute bottom-16 left-48 pointer-events-none z-10">
         <Flower size={100} fill="#d1ecf1" rotate={65} />
       </div>
 
       {/* ── Navbar ── */}
-      <header className="h-[50px] bg-[#f8f6f5] border-b border-[rgba(93,93,90,0.7)] flex items-center px-6 shrink-0 gap-4 relative z-20">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="relative flex items-center justify-center w-[26px] h-[26px]">
-            <div className="absolute inset-0 rounded-[15px] bg-[#5d5d5a]/10" />
-            <Kanban className="w-4 h-4 text-[#5d5d5a] relative z-10" />
-          </div>
-          <span className="text-[18px] font-bold italic text-[#5d5d5a]">
-            planno
-          </span>
-        </div>
-        <div className="flex-1" />
-        <button className="flex items-center justify-center cursor-pointer">
-          <User className="w-[26px] h-[26px] text-[#5d5d5a]" />
-        </button>
-      </header>
-
+      {/* Fixed: Menghapus props activeView dan onViewChange karena tidak ada di definisi Navbar */}
+      <Navbar />
+      
       {/* ── Page body — centered ── */}
-      <div className="relative z-10 flex flex-col items-center px-6 pt-[18px] pb-12">
+      <div className="relative z-10 flex flex-col items-center px-6 pt-4.5 pb-12">
         {/* Filter pill + heading */}
-        <div className="flex items-center gap-4 mb-[18px] w-full max-w-[882px]">
+        <div className="flex items-center gap-4 mb-4.5 w-full max-w-220.5">
           <h2 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.84px]">
             Pengaturan
           </h2>
         </div>
 
-        <div className="w-full max-w-[882px]">
+        <div className="w-full max-w-220.5">
           <ProfileCard
             name={profile.name}
             email={profile.email}
