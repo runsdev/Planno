@@ -72,9 +72,9 @@ export function Navbar({ activeView, onViewChange }: NavbarProps) {
 
     const handleNavClick = (label: "Kanban" | "Calendar", href: string) => {
         if (isTabMode) {
-          onViewChange?.(label);
+            onViewChange?.(label);
         } else {
-          router.push(href);
+            router.push(`/planner?view=${label}`);
         }
       };
   
@@ -94,7 +94,7 @@ export function Navbar({ activeView, onViewChange }: NavbarProps) {
         {/* ── Nav / Tab links ── */}
         <div className="flex-1 flex items-center justify-center gap-6">
             {navItems.map(({ label, icon: Icon, href }) => {
-            const isActive = isPlanner ? activeView === label : pathname === href;
+            const isActive = isTabMode ? activeView === label : isPlanner ? activeView === label : false; 
 
             return (
                 <button
