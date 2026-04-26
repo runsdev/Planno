@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { SearchBar } from "@/components/ui/searchBar";
 import { AddTaskModal, ParsedResult } from "@/components/add-task/addTaskModal";
+import { FocusModal } from "@/components/focus/focusModal";
 
 function UserMenu() {
   const [open, setOpen] = useState(false);
@@ -48,16 +49,21 @@ function UserMenu() {
 type NavbarProps = {
   activeView?: "Kanban" | "Calendar";
   onViewChange?: (view: "Kanban" | "Calendar") => void;
+  onMarkComplete?: (taskId: number, totalSeconds: number) => void;
+  taskProgress?: Record<number, { completedSessions: number; totalFocusSeconds: number }>;
+  onSessionFinished?: (taskId: number, addedSeconds: number) => void;
+  completedTaskIds?: number[]; 
 };
 
-export function Navbar({ activeView, onViewChange }: NavbarProps) {
+export function Navbar({ activeView, onViewChange, onMarkComplete, taskProgress = {}, onSessionFinished, completedTaskIds = [],}: NavbarProps) {
   const pathname   = usePathname();
   const router     = useRouter();
   const isSettings = pathname === "/settings";
   const isPlanner  = pathname === "/planner";
   const isTabMode  = isPlanner && !!onViewChange;
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [addModalOpen,   setAddModalOpen]   = useState(false);
+  const [focusModalOpen, setFocusModalOpen] = useState(false);
 
   const navItems: { label: "Kanban" | "Calendar"; icon: typeof Kanban }[] = [
     { label: "Kanban",   icon: Kanban   },
@@ -69,10 +75,14 @@ export function Navbar({ activeView, onViewChange }: NavbarProps) {
     else router.push(`/planner?view=${label}`);
   };
 
-  // TODO: wire this to actual task store (context, zustand, etc.)
+  // TODO: wire to actual task store
   const handleSaveTask = (result: ParsedResult) => {
     console.log("Task saved:", result);
-    // dispatch({ type: "ADD_TASK", payload: result });
+  };
+
+  // TODO: wire totalSeconds to task store to update time spent
+  const handleSessionComplete = (taskId: number | null, totalSeconds: number) => {
+    console.log("Session complete — taskId:", taskId, "totalSeconds:", totalSeconds);
   };
 
   return (
@@ -114,10 +124,9 @@ export function Navbar({ activeView, onViewChange }: NavbarProps) {
             <>
               <SearchBar />
 
-              {/* Tambah → buka modal */}
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={() => setAddModalOpen(true)}
                 className="flex items-center gap-1.5 h-8.5 px-4 rounded-[8px] bg-[#4a4a47] text-[#f8f6f5] text-[13px] font-medium hover:bg-[#333331] transition-all cursor-pointer"
               >
                 <PenLine className="w-3.5 h-3.5" />
@@ -125,12 +134,19 @@ export function Navbar({ activeView, onViewChange }: NavbarProps) {
               </button>
 
               <div className="flex items-center gap-1.5">
+                {/* Timer → buka focus modal */}
                 <button
                   type="button"
-                  className="flex items-center justify-center w-8.5 h-8.5 bg-[#f8f6f5] rounded-[8px] text-[#5d5d5a]/70 hover:bg-[#eeede9] hover:text-[#5d5d5a] transition-all cursor-pointer"
+                  onClick={() => setFocusModalOpen(true)}
+                  className={`flex items-center justify-center w-8.5 h-8.5 rounded-[8px] transition-all cursor-pointer
+                    ${focusModalOpen
+                      ? "bg-[#4a4a47] text-[#f8f6f5]"
+                      : "bg-[#f8f6f5] text-[#5d5d5a]/70 hover:bg-[#eeede9] hover:text-[#5d5d5a]"
+                    }`}
                 >
                   <Timer className="w-4.5 h-4.5" />
                 </button>
+
                 <button
                   type="button"
                   onClick={() => router.push("/settings")}
@@ -141,17 +157,26 @@ export function Navbar({ activeView, onViewChange }: NavbarProps) {
               </div>
             </>
           )}
+
           <div className="pl-1 border-l border-[#5d5d5a]/10 ml-1">
             <UserMenu />
           </div>
         </div>
       </header>
 
-      {/* Modal rendered outside header to avoid z-index issues */}
+      {/* Modals rendered outside header */}
       <AddTaskModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
         onSave={handleSaveTask}
+      />
+      <FocusModal
+        open={focusModalOpen}
+        onClose={() => setFocusModalOpen(false)}
+        onMarkComplete={(taskId, totalSeconds) => onMarkComplete?.(taskId, totalSeconds)}
+        taskProgress={taskProgress}
+        onSessionFinished={(taskId, addedSeconds) => onSessionFinished?.(taskId, addedSeconds)}
+        completedTaskIds={completedTaskIds} 
       />
     </>
   );

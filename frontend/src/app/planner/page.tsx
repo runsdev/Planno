@@ -9,23 +9,28 @@ import { RightSidebar } from "@/components/planner/rightSidebar";
 import { FilterType, Task } from "@/components/planner/plannerTypes";
 import { INITIAL_TASKS } from "@/components/planner/plannerMockData";
 
+type TaskProgress = Record<number, {
+  completedSessions: number;
+  totalFocusSeconds: number;
+}>;
+
 export default function PlannerPage() {
-  const searchParams = useSearchParams();
+  const searchParams    = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [activeFilter, setActiveFilter] = useState<FilterType>("Semua");
 
-  const viewParam = searchParams.get("view");
+  // Progress fokus per task — persists selama halaman tidak di-refresh
+  // TODO: persist ke localStorage atau backend agar tidak hilang saat refresh
+  const [taskProgress, setTaskProgress] = useState<TaskProgress>({});
+
+  const viewParam    = searchParams.get("view");
   const initialView: "Kanban" | "Calendar" =
     viewParam === "Calendar" ? "Calendar" : "Kanban";
-
   const [activeView, setActiveView] = useState<"Kanban" | "Calendar">(initialView);
 
-  // Sync jika user navigate dengan URL yang berbeda (back/forward browser)
   useEffect(() => {
     const v = searchParams.get("view");
-    if (v === "Calendar" || v === "Kanban") {
-      setActiveView(v);
-    }
+    if (v === "Calendar" || v === "Kanban") setActiveView(v);
   }, [searchParams]);
 
   const toggleTask = (id: number) => {
@@ -34,28 +39,65 @@ export default function PlannerPage() {
     );
   };
 
+  // Dipanggil setiap kali 1 sesi fokus selesai (manual atau otomatis)
+  // Akumulasi sessions dan detik fokus per task
+  const handleSessionFinished = (taskId: number, addedSeconds: number) => {
+    setTaskProgress((prev) => {
+      const existing = prev[taskId] ?? { completedSessions: 0, totalFocusSeconds: 0 };
+      return {
+        ...prev,
+        [taskId]: {
+          completedSessions: existing.completedSessions + 1,
+          totalFocusSeconds: existing.totalFocusSeconds + addedSeconds,
+        },
+      };
+    });
+  };
+
+  // Tandai tugas selesai dari focus modal
+  const handleMarkComplete = (taskId: number, totalSeconds: number) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, completed: true, actualSeconds: totalSeconds }
+          : t
+      )
+    );
+    // Bersihkan progress task yang sudah selesai
+    setTaskProgress((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+    // TODO: sync ke backend
+  };
+
   const filteredTasks = tasks.filter((task) => {
-    if (activeFilter === "Semua") return true;
+    if (activeFilter === "Semua")         return true;
     if (activeFilter === "Belum Selesai") return !task.completed;
-    if (activeFilter === "Selesai") return task.completed;
+    if (activeFilter === "Selesai")       return task.completed;
     return task.category === activeFilter;
   });
+
+  const completedTaskIds = tasks
+    .filter((t) => t.completed)
+    .map((t) => t.id);
 
   return (
     <div
       className="min-h-screen bg-[#f8f6f5] flex flex-col"
       style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
     >
-      <Navbar activeView={activeView} onViewChange={setActiveView} />
+      <Navbar
+        activeView={activeView}
+        onViewChange={setActiveView}
+        onMarkComplete={handleMarkComplete}
+        taskProgress={taskProgress}
+        onSessionFinished={handleSessionFinished}
+        completedTaskIds={completedTaskIds} 
+      />
 
       <div className="flex flex-1 overflow-hidden">
-        {/*
-          Kedua view selalu mounted (tidak di-unmount saat switch tab),
-          sehingga scroll position dan state tetap tersimpan.
-          CSS `hidden` (display:none) menyembunyikan tanpa unmount.
-        */}
-
-        {/* Kanban view */}
         <div className={`flex flex-col flex-1 overflow-hidden ${activeView !== "Kanban" ? "hidden" : ""}`}>
           <KanbanView
             tasks={filteredTasks}
@@ -64,13 +106,9 @@ export default function PlannerPage() {
             onToggleTask={toggleTask}
           />
         </div>
-
-        {/* Calendar view */}
         <div className={`flex flex-1 overflow-hidden ${activeView !== "Calendar" ? "hidden" : ""}`}>
           <CalendarView />
         </div>
-
-        {/* Sidebar — selalu tampil di kedua view */}
         <RightSidebar tasks={tasks} />
       </div>
     </div>

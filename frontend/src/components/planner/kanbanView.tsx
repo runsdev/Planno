@@ -1,26 +1,46 @@
 "use client";
 
-import { CheckCircle2, Circle, Plus } from "lucide-react";
+import { CheckCircle2, Circle, Plus, Clock } from "lucide-react";
 import { Task, Priority, FilterType, FILTERS } from "./plannerTypes";
 import { PRIORITY_META, CATEGORY_META } from "./plannerStyles";
 
+// ─── Helper format detik → "X jam Y mnt" ─────────────────────────────────────
+function formatActualTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0 && m > 0) return `${h} jam ${m} mnt`;
+  if (h > 0)           return `${h} jam`;
+  if (m > 0)           return `${m} mnt`;
+  return "< 1 mnt";
+}
+
+// ─── Task card ────────────────────────────────────────────────────────────────
 function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: number) => void }) {
-  const cat = CATEGORY_META[task.category];
+  const cat          = CATEGORY_META[task.category];
   const deadlineColor = task.deadlineColor ?? "text-[#5d5d5a]";
 
   return (
     <div className={`bg-white rounded-[14.5px] shadow-[0px_1px_4px_0px_rgba(33,33,33,0.08)] border-l-8 ${PRIORITY_META[task.priority].borderLeft} transition-opacity duration-200 ${task.completed ? "opacity-55" : ""}`}>
       <div className="p-3 space-y-2">
+
+        {/* Title row */}
         <div className="flex items-start gap-2.5">
-          <button type="button" onClick={() => onToggle(task.id)} className="shrink-0 mt-px cursor-pointer transition-colors">
+          <button
+            type="button"
+            onClick={() => onToggle(task.id)}
+            className="shrink-0 mt-px cursor-pointer transition-colors"
+          >
             {task.completed
               ? <CheckCircle2 className="w-5 h-5 text-[#6bab7e]" />
-              : <Circle className="w-5 h-5 text-[#5d5d5a]/30 hover:text-[#5d5d5a]/60" />}
+              : <Circle className="w-5 h-5 text-[#5d5d5a]/30 hover:text-[#5d5d5a]/60" />
+            }
           </button>
           <span className={`text-[12.25px] font-semibold text-[#5d5d5a] leading-[17.5px] transition-all duration-200 ${task.completed ? "line-through text-[#5d5d5a]/50" : ""}`}>
             {task.title}
           </span>
         </div>
+
+        {/* Deadline + duration */}
         <div className="flex items-center gap-1.5 pl-7">
           <span className={`text-[10.5px] font-normal ${task.completed ? "text-[#5d5d5a]/40" : deadlineColor}`}>
             {task.deadline}
@@ -29,11 +49,23 @@ function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: number) => vo
             {task.duration}
           </span>
         </div>
+
+        {/* Category badge */}
         <div className="pl-7">
           <span className={`text-[10.5px] font-semibold ${cat.bg} ${cat.text} rounded-full px-1.75 py-[3.5px]`}>
             {task.category}
           </span>
         </div>
+
+        {/* Actual time — hanya muncul jika task selesai dan punya actualSeconds */}
+        {task.completed && task.actualSeconds !== undefined && (
+          <div className="pl-7 flex items-center gap-1">
+            <Clock className="w-2.75 h-2.75 text-[#6bab7e]" />
+            <span className="text-[10.5px] font-medium text-[#6bab7e]">
+              Selesai dalam {formatActualTime(task.actualSeconds)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -41,7 +73,10 @@ function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: number) => vo
 
 function AddTaskButton() {
   return (
-    <button type="button" className="w-full h-[40.5px] border border-dashed border-[rgba(93,93,90,0.3)] rounded-[14.5px] flex items-center justify-center gap-1.5 text-[12.25px] font-normal text-[rgba(93,93,90,0.8)] hover:bg-[#f0efee] transition-colors cursor-pointer">
+    <button
+      type="button"
+      className="w-full h-[40.5px] border border-dashed border-[rgba(93,93,90,0.3)] rounded-[14.5px] flex items-center justify-center gap-1.5 text-[12.25px] font-normal text-[rgba(93,93,90,0.8)] hover:bg-[#f0efee] transition-colors cursor-pointer"
+    >
       <Plus className="w-4 h-4" />
       Tambah tugas
     </button>
