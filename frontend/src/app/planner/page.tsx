@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { KanbanView } from "@/components/planner/kanbanView";
@@ -14,16 +14,15 @@ type TaskProgress = Record<number, {
   totalFocusSeconds: number;
 }>;
 
-export default function PlannerPage() {
-  const searchParams    = useSearchParams();
+function PlannerContent() {
+  const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [activeFilter, setActiveFilter] = useState<FilterType>("Semua");
 
-  // Progress fokus per task — persists selama halaman tidak di-refresh
-  // TODO: persist ke localStorage atau backend agar tidak hilang saat refresh
+  // Progress fokus per task
   const [taskProgress, setTaskProgress] = useState<TaskProgress>({});
 
-  const viewParam    = searchParams.get("view");
+  const viewParam = searchParams.get("view");
   const initialView: "Kanban" | "Calendar" =
     viewParam === "Calendar" ? "Calendar" : "Kanban";
   const [activeView, setActiveView] = useState<"Kanban" | "Calendar">(initialView);
@@ -35,12 +34,10 @@ export default function PlannerPage() {
 
   const toggleTask = (id: number) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
     );
   };
 
-  // Dipanggil setiap kali 1 sesi fokus selesai (manual atau otomatis)
-  // Akumulasi sessions dan detik fokus per task
   const handleSessionFinished = (taskId: number, addedSeconds: number) => {
     setTaskProgress((prev) => {
       const existing = prev[taskId] ?? { completedSessions: 0, totalFocusSeconds: 0 };
@@ -54,7 +51,6 @@ export default function PlannerPage() {
     });
   };
 
-  // Tandai tugas selesai dari focus modal
   const handleMarkComplete = (taskId: number, totalSeconds: number) => {
     setTasks((prev) =>
       prev.map((t) =>
@@ -63,13 +59,11 @@ export default function PlannerPage() {
           : t
       )
     );
-    // Bersihkan progress task yang sudah selesai
     setTaskProgress((prev) => {
       const next = { ...prev };
       delete next[taskId];
       return next;
     });
-    // TODO: sync ke backend
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -112,5 +106,13 @@ export default function PlannerPage() {
         <RightSidebar tasks={tasks} />
       </div>
     </div>
+  );
+}
+
+export default function PlannerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8f6f5]" />}>
+      <PlannerContent />
+    </Suspense>
   );
 }
