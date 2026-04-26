@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { KanbanView } from "@/components/planner/kanbanView";
@@ -9,28 +9,19 @@ import { RightSidebar } from "@/components/planner/rightSidebar";
 import { FilterType, Task } from "@/components/planner/plannerTypes";
 import { INITIAL_TASKS } from "@/components/planner/plannerMockData";
 
-export default function PlannerPage() {
+function PlannerContent() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [activeFilter, setActiveFilter] = useState<FilterType>("Semua");
 
   const viewParam = searchParams.get("view");
-  const initialView: "Kanban" | "Calendar" =
-    viewParam === "Calendar" ? "Calendar" : "Kanban";
-
-  const [activeView, setActiveView] = useState<"Kanban" | "Calendar">(initialView);
-
-  // Sync jika user navigate dengan URL yang berbeda (back/forward browser)
-  useEffect(() => {
-    const v = searchParams.get("view");
-    if (v === "Calendar" || v === "Kanban") {
-      setActiveView(v);
-    }
-  }, [searchParams]);
+  const [activeView, setActiveView] = useState<"Kanban" | "Calendar">(
+    viewParam === "Calendar" ? "Calendar" : "Kanban",
+  );
 
   const toggleTask = (id: number) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
     );
   };
 
@@ -56,7 +47,9 @@ export default function PlannerPage() {
         */}
 
         {/* Kanban view */}
-        <div className={`flex flex-col flex-1 overflow-hidden ${activeView !== "Kanban" ? "hidden" : ""}`}>
+        <div
+          className={`flex flex-col flex-1 overflow-hidden ${activeView !== "Kanban" ? "hidden" : ""}`}
+        >
           <KanbanView
             tasks={filteredTasks}
             activeFilter={activeFilter}
@@ -66,7 +59,9 @@ export default function PlannerPage() {
         </div>
 
         {/* Calendar view */}
-        <div className={`flex flex-1 overflow-hidden ${activeView !== "Calendar" ? "hidden" : ""}`}>
+        <div
+          className={`flex flex-1 overflow-hidden ${activeView !== "Calendar" ? "hidden" : ""}`}
+        >
           <CalendarView />
         </div>
 
@@ -74,5 +69,13 @@ export default function PlannerPage() {
         <RightSidebar tasks={tasks} />
       </div>
     </div>
+  );
+}
+
+export default function PlannerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8f6f5]" />}>
+      <PlannerContent />
+    </Suspense>
   );
 }
