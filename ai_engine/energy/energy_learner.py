@@ -36,6 +36,25 @@ class EnergyLearner:
 
     def __init__(self):
         self._energy_logs = {}
+        self._onboarding_patterns = {}  # cold start dari data onboarding
+
+    def set_onboarding_pattern(self, user_id: str, energy_pattern: dict) -> dict:
+        """
+        Set pattern energi awal dari data onboarding user.
+        Menggantikan DEFAULT_ENERGY_PATTERN sebagai cold start yang lebih akurat.
+
+        Args:
+            user_id (str): ID user
+            energy_pattern (dict): pattern dari OnboardingParser.parse()["energy_pattern"]
+
+        Returns:
+            dict: {success, message}
+        """
+        self._onboarding_patterns[user_id] = energy_pattern
+        return {
+            "success": True,
+            "message": f"Pattern onboarding berhasil diset untuk user {user_id}"
+        }
 
     def log_energy(self, user_id: str, time_slot: str, energy_level: int) -> dict:
         """
@@ -94,16 +113,17 @@ class EnergyLearner:
         jumlah_hari = len(set(log["tanggal"] for log in logs))
 
         if jumlah_hari < self.MIN_HARI_UNTUK_BELAJAR:
-            return self._get_default_pattern(jumlah_hari)
+            return self._get_default_pattern(user_id, jumlah_hari)
 
+        base_pattern = self._get_base_pattern(user_id)
         pattern_user = self._hitung_rata_rata_per_jam(logs)
         bobot_user = min(0.9, jumlah_hari / self.MIN_HARI_FULL_PERSONALIZED)
         bobot_default = 1 - bobot_user
 
         pattern_final = {}
-        for jam in self.DEFAULT_ENERGY_PATTERN:
-            user_val = pattern_user.get(jam, self.DEFAULT_ENERGY_PATTERN[jam])
-            default_val = self.DEFAULT_ENERGY_PATTERN[jam]
+        for jam in base_pattern:
+            user_val    = pattern_user.get(jam, base_pattern[jam])
+            default_val = base_pattern[jam]
             pattern_final[jam] = round(
                 user_val * bobot_user + default_val * bobot_default, 2
             )
@@ -160,20 +180,29 @@ class EnergyLearner:
             "label": label
         }
 
-    def _get_default_pattern(self, jumlah_hari: int) -> dict:
-        """Return default pattern untuk user baru."""
-        peak_hours = self._get_peak_hours_from_pattern(
-            self.DEFAULT_ENERGY_PATTERN, top_n=3
+    def _get_base_pattern(self, user_id: str) -> dict:
+        """
+        Return pattern dasar untuk user — onboarding jika ada, default jika tidak.
+        Onboarding pattern lebih akurat dari default karena sudah disesuaikan
+        dengan jawaban user saat pertama kali daftar.
+        """
+        return self._onboarding_patterns.get(
+            user_id, self.DEFAULT_ENERGY_PATTERN
         )
-        low_hours = self._get_low_hours_from_pattern(
-            self.DEFAULT_ENERGY_PATTERN, bottom_n=3
-        )
+
+    def _get_default_pattern(self, user_id: str, jumlah_hari: int) -> dict:
+        """Return pattern awal untuk user baru — pakai onboarding jika ada."""
+        base_pattern = self._get_base_pattern(user_id)
+        source = "onboarding" if user_id in self._onboarding_patterns else "default"
+        peak_hours = self._get_peak_hours_from_pattern(base_pattern, top_n=3)
+        low_hours  = self._get_low_hours_from_pattern(base_pattern, bottom_n=3)
         return {
             "peak_hours": peak_hours,
             "low_hours": low_hours,
-            "pattern": self.DEFAULT_ENERGY_PATTERN,
+            "pattern": base_pattern,
             "confidence": "low",
-            "data_points": jumlah_hari
+            "data_points": jumlah_hari,
+            "source": source
         }
 
     def _hitung_rata_rata_per_jam(self, logs: list) -> dict:

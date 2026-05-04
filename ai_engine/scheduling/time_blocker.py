@@ -2,9 +2,8 @@
 # Modul: Intelligent Time Blocking
 # Deskripsi: Menyusun jadwal harian otomatis berdasarkan prioritas dan energi
 # Menggunakan: Rule-based algorithm
-# Input: list tasks, energy pattern user
+# Input: list tasks, energy pattern user, konfigurasi onboarding
 # Output: list time blocks untuk hari ini
-# Status: TODO - akan diimplementasi minggu depan
 
 from datetime import datetime, timedelta
 
@@ -14,13 +13,20 @@ class TimeBlocker:
     Modul untuk menyusun jadwal harian otomatis berdasarkan prioritas.
     Menggunakan rule-based algorithm — tidak butuh data training.
 
+    Mendukung konfigurasi dari onboarding:
+    - focus_duration_minutes: durasi sesi fokus (30/60/120 menit)
+    - break_interval_minutes: menit kerja sebelum break (dari work style)
+
     Cara pakai:
         blocker = TimeBlocker()
-        jadwal = blocker.generate_schedule(tasks, "08:00", "17:00")
-        print(jadwal)
+        jadwal = blocker.generate_schedule(
+            tasks, "08:00", "17:00",
+            focus_duration_minutes=60,
+            break_interval_minutes=90
+        )
     """
 
-    DURASI_BREAK = 15
+    DURASI_BREAK = 10
     DURASI_KERJA_SEBELUM_BREAK = 90
     DURASI_DEFAULT = 60
 
@@ -29,7 +35,9 @@ class TimeBlocker:
         tasks: list,
         work_start: str = "08:00",
         work_end: str = "17:00",
-        tanggal: str = None
+        tanggal: str = None,
+        focus_duration_minutes: int = None,
+        break_interval_minutes: int = None,
     ) -> dict:
         """
         Generate jadwal harian otomatis dari list tasks.
@@ -44,6 +52,8 @@ class TimeBlocker:
             work_start (str): Jam mulai kerja, format HH:MM
             work_end (str): Jam selesai kerja, format HH:MM
             tanggal (str | None): Tanggal jadwal YYYY-MM-DD, default hari ini
+            focus_duration_minutes (int | None): Override durasi sesi dari onboarding
+            break_interval_minutes (int | None): Override interval break dari onboarding
 
         Returns:
             dict: {
@@ -57,6 +67,10 @@ class TimeBlocker:
         if tanggal is None:
             tanggal = datetime.now().strftime("%Y-%m-%d")
 
+        # Gunakan konfigurasi onboarding jika tersedia
+        durasi_kerja_sebelum_break = break_interval_minutes or self.DURASI_KERJA_SEBELUM_BREAK
+        durasi_fokus_default = focus_duration_minutes or self.DURASI_DEFAULT
+
         tasks_sorted = sorted(
             tasks,
             key=lambda x: x.get("priority_score", 0),
@@ -64,7 +78,7 @@ class TimeBlocker:
         )
 
         start_dt = datetime.strptime(f"{tanggal} {work_start}", "%Y-%m-%d %H:%M")
-        end_dt = datetime.strptime(f"{tanggal} {work_end}", "%Y-%m-%d %H:%M")
+        end_dt   = datetime.strptime(f"{tanggal} {work_end}", "%Y-%m-%d %H:%M")
 
         blocks = []
         current_time = start_dt
@@ -75,8 +89,8 @@ class TimeBlocker:
             if current_time >= end_dt:
                 break
 
-            # Sisipkan break kalau sudah kerja 90 menit
-            if menit_sejak_break >= self.DURASI_KERJA_SEBELUM_BREAK:
+            # Sisipkan break berdasarkan interval dari onboarding
+            if menit_sejak_break >= durasi_kerja_sebelum_break:
                 break_end = current_time + timedelta(minutes=self.DURASI_BREAK)
                 if break_end <= end_dt:
                     blocks.append({
@@ -91,7 +105,8 @@ class TimeBlocker:
                     current_time = break_end
                     menit_sejak_break = 0
 
-            durasi = task.get("duration_minutes") or self.DURASI_DEFAULT
+            # Gunakan durasi task, atau durasi fokus dari onboarding sebagai default
+            durasi = task.get("duration_minutes") or durasi_fokus_default
             task_end = current_time + timedelta(minutes=durasi)
 
             if task_end > end_dt:
@@ -125,7 +140,9 @@ class TimeBlocker:
             "date": tanggal,
             "blocks": blocks,
             "total_tasks": task_count,
-            "total_jam_kerja": round(total_menit_kerja / 60, 1)
+            "total_jam_kerja": round(total_menit_kerja / 60, 1),
+            "focus_duration_used": durasi_fokus_default,
+            "break_interval_used": durasi_kerja_sebelum_break
         }
 
     def smart_reschedule(self, schedule: dict, new_task: dict) -> dict:
@@ -144,13 +161,12 @@ class TimeBlocker:
         """
 
         changes = []
-        blocks = schedule.get("blocks", [])
+        blocks  = schedule.get("blocks", [])
         tanggal = schedule.get("date", datetime.now().strftime("%Y-%m-%d"))
 
-        durasi_new = new_task.get("duration_minutes") or self.DURASI_DEFAULT
+        durasi_new   = new_task.get("duration_minutes") or self.DURASI_DEFAULT
         priority_new = new_task.get("priority_score", 0)
 
-        # Cari slot kosong di antara blocks yang ada
         slot_ditemukan = False
         new_blocks = []
 
@@ -159,11 +175,8 @@ class TimeBlocker:
                 new_blocks.append(block)
                 continue
 
-            # Cek apakah ada celah sebelum block ini
             if i == 0:
-                prev_end = datetime.strptime(
-                    f"{tanggal} 08:00", "%Y-%m-%d %H:%M"
-                )
+                prev_end = datetime.strptime(f"{tanggal} 08:00", "%Y-%m-%d %H:%M")
             else:
                 prev_end = datetime.strptime(
                     f"{tanggal} {blocks[i-1]['end']}", "%Y-%m-%d %H:%M"
@@ -195,9 +208,9 @@ class TimeBlocker:
             new_blocks.append(block)
 
         if not slot_ditemukan:
-            last_end = blocks[-1]["end"] if blocks else "08:00"
+            last_end   = blocks[-1]["end"] if blocks else "08:00"
             task_start = datetime.strptime(f"{tanggal} {last_end}", "%Y-%m-%d %H:%M")
-            task_end = task_start + timedelta(minutes=durasi_new)
+            task_end   = task_start + timedelta(minutes=durasi_new)
             new_blocks.append({
                 "start": task_start.strftime("%H:%M"),
                 "end": task_end.strftime("%H:%M"),
