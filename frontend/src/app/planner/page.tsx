@@ -42,7 +42,6 @@ function PlannerContent() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>("Semua");
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // Progress fokus per task
   const [taskProgress, setTaskProgress] = useState<TaskProgress>({});
@@ -54,11 +53,6 @@ function PlannerContent() {
     initialView,
   );
 
-  useEffect(() => {
-    const v = searchParams.get("view");
-    if (v === "Calendar" || v === "Kanban") setActiveView(v);
-  }, [searchParams]);
-
   // ── Load tasks from DB ────────────────────────────────────────────────────
   useEffect(() => {
     fetch("/api/tasks")
@@ -66,8 +60,7 @@ function PlannerContent() {
       .then((data: Task[] | null) => {
         if (data && data.length > 0) setTasks(data);
       })
-      .catch(() => {}) // keep INITIAL_TASKS on error
-      .finally(() => setLoading(false));
+      .catch(() => {}); // keep INITIAL_TASKS on error
   }, []);
 
   // ── Mutations ─────────────────────────────────────────────────────────────

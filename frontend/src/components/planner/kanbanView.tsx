@@ -20,7 +20,7 @@ function TaskCard({
   onToggle,
 }: {
   task: Task;
-  onToggle: (id: number) => void;
+  onToggle: (id: string) => void;
 }) {
   const cat = CATEGORY_META[task.category];
   const deadlineColor = task.deadlineColor ?? "text-[#5d5d5a]";
@@ -106,7 +106,7 @@ function KanbanColumn({
 }: {
   priority: Priority;
   tasks: Task[];
-  onToggle: (id: number) => void;
+  onToggle: (id: string) => void;
   onOpenAddTask?: () => void;
 }) {
   const meta = PRIORITY_META[priority];
@@ -138,7 +138,7 @@ type KanbanViewProps = {
   tasks: Task[];
   activeFilter: FilterType;
   onFilterChange: (f: FilterType) => void;
-  onToggleTask: (id: number) => void;
+  onToggleTask: (id: string) => void;
   onOpenAddTask?: () => void;
 };
 
