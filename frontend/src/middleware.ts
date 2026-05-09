@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { nextUrl, auth: session } = req;
   const isLoggedIn = !!session;
+  console.log("Session in middleware:", session);
+  console.log(isLoggedIn ? "User is logged in" : "User is not logged in");
 
   const publicPaths = ["/auth/login"];
   const isPublicPath = publicPaths.some((path) =>

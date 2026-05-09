@@ -1,11 +1,16 @@
 export type Priority = "Tinggi" | "Sedang" | "Rendah";
 export type Category = "Akademik" | "Kerja" | "Personal" | "Lainnya";
 export type FilterType =
-  | "Semua" | "Belum Selesai" | "Selesai"
-  | "Akademik" | "Kerja" | "Personal" | "Lainnya";
+  | "Semua"
+  | "Belum Selesai"
+  | "Selesai"
+  | "Akademik"
+  | "Kerja"
+  | "Personal"
+  | "Lainnya";
 
 export interface Task {
-  id: number;
+  id: string;
   title: string;
   deadline: string;
   deadlineColor?: string;
@@ -14,7 +19,6 @@ export interface Task {
   priority: Priority;
   completed: boolean;
   // Waktu aktual dari focus session (detik), diisi saat Tandai Selesai
-  // TODO: persist ke database saat integrasi backend
   actualSeconds?: number;
 }
 
@@ -31,12 +35,17 @@ export interface CalendarEvent {
 }
 
 export const FILTERS: FilterType[] = [
-  "Semua", "Belum Selesai", "Selesai",
-  "Akademik", "Kerja", "Personal", "Lainnya",
+  "Semua",
+  "Belum Selesai",
+  "Selesai",
+  "Akademik",
+  "Kerja",
+  "Personal",
+  "Lainnya",
 ];
 
-export const CAL_START   = 7;
-export const CAL_END     = 22;
-export const HOUR_H      = 64;
-export const GRID_TOP    = 20;
-export const TIME_COL_W  = 56;
+export const CAL_START = 7;
+export const CAL_END = 22;
+export const HOUR_H = 64;
+export const GRID_TOP = 20;
+export const TIME_COL_W = 56;

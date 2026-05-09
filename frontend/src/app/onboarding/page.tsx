@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ToggleGroup } from "@/components/ui/toggleGroup";
 import { TimeRangeInput } from "@/components/ui/timeRangeInput";
 import { Sparkles } from "lucide-react";
+import { api } from "@/lib/api";
 
 // ─── Flower SVG ───────────────────────────────────────────────────────────────
 function Flower({
@@ -64,7 +65,8 @@ const defaultPreferences: Preferences = {
 // ─── Onboarding Page ──────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const router = useRouter();
-  const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
+  const [preferences, setPreferences] =
+    useState<Preferences>(defaultPreferences);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (field: string, value: any) => {
@@ -77,16 +79,29 @@ export default function OnboardingPage() {
     preferences.focusDuration !== "" &&
     preferences.taskType !== "";
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isComplete || isSubmitting) return;
     setIsSubmitting(true);
 
-    // TODO: simpan ke API / localStorage / context
-    // Contoh: localStorage.setItem("planno_preferences", JSON.stringify(preferences));
+    const prefs = {
+      ...preferences,
+      workHours: preferences.workHours.start
+        ? preferences.workHours
+        : { start: "08:00", end: "17:00" },
+    };
 
-    setTimeout(() => {
+    try {
+      const config = await api.parseOnboarding(prefs);
+      localStorage.setItem("planno_preferences", JSON.stringify(prefs));
+      localStorage.setItem("planno_ai_config", JSON.stringify(config));
+    } catch (err) {
+      // Save preferences even if API is unavailable
+      console.error("Onboarding API error:", err);
+      localStorage.setItem("planno_preferences", JSON.stringify(prefs));
+    } finally {
+      setIsSubmitting(false);
       router.push("/planner");
-    }, 800);
+    }
   };
 
   return (
@@ -95,29 +110,28 @@ export default function OnboardingPage() {
       style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
     >
       {/* ── Decorative flowers ── */}
-        {/* Top-right: large pink flower */}
-        <div className="absolute -top-15 -right-15 pointer-events-none z-0">
-            <Flower size={400} fill="#fce4e4" rotate={30} />
-        </div>
+      {/* Top-right: large pink flower */}
+      <div className="absolute -top-15 -right-15 pointer-events-none z-0">
+        <Flower size={400} fill="#fce4e4" rotate={30} />
+      </div>
 
-        {/* Top-right: small blue flower */}
-        <div className="absolute top-7.5 right-80 pointer-events-none z-10">
-            <Flower size={100} fill="#d1ecf1" rotate={65} />
-        </div>
+      {/* Top-right: small blue flower */}
+      <div className="absolute top-7.5 right-80 pointer-events-none z-10">
+        <Flower size={100} fill="#d1ecf1" rotate={65} />
+      </div>
 
-        {/* Bottom-left: large pink flower */}
-        <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
-            <Flower size={400} fill="#fce4e4" rotate={30}  />
-        </div>
+      {/* Bottom-left: large pink flower */}
+      <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
+        <Flower size={400} fill="#fce4e4" rotate={30} />
+      </div>
 
-        {/* Bottom-left: small blue flower */}
-        <div className="absolute bottom-7.5 left-80 pointer-events-none z-10">
-            <Flower size={100} fill="#d1ecf1" rotate={65} />
-        </div>
+      {/* Bottom-left: small blue flower */}
+      <div className="absolute bottom-7.5 left-80 pointer-events-none z-10">
+        <Flower size={100} fill="#d1ecf1" rotate={65} />
+      </div>
 
       {/* ── Card ── */}
       <div className="relative z-10 w-full max-w-220.5 mx-6 flex flex-col gap-6 py-12">
-
         {/* Header */}
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-[40px] font-bold italic text-[#5d5d5a] leading-none">
@@ -130,7 +144,6 @@ export default function OnboardingPage() {
 
         {/* Form card */}
         <div className="bg-white rounded-[14.5px] shadow-[0px_4px_16px_0px_rgba(33,33,33,0.08)] px-7 py-7 flex flex-col gap-7">
-
           {/* AI badge */}
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a6fa5] bg-[rgba(205,235,241,0.5)] border-[1.5px] border-[#4a6fa5] rounded-full px-3.5 py-1">
@@ -140,7 +153,9 @@ export default function OnboardingPage() {
           </div>
 
           <p className="text-[13px] font-normal text-[#6b6b6b] -mt-3">
-            Jawab beberapa pertanyaan singkat berikut agar AI planno bisa membantumu dengan lebih tepat. Kamu bisa mengubahnya kapan saja dari halaman Pengaturan.
+            Jawab beberapa pertanyaan singkat berikut agar AI planno bisa
+            membantumu dengan lebih tepat. Kamu bisa mengubahnya kapan saja dari
+            halaman Pengaturan.
           </p>
 
           {/* Divider */}
@@ -216,9 +231,10 @@ export default function OnboardingPage() {
               onClick={handleSubmit}
               disabled={!isComplete || isSubmitting}
               className={`h-9 px-6 rounded-[10.5px] text-[12.25px] font-semibold transition-colors cursor-pointer
-                ${isComplete && !isSubmitting
-                  ? "bg-[#5d5d5a] text-[#f8f6f5] hover:bg-[#4a4a47]"
-                  : "bg-[rgba(93,93,90,0.15)] text-[#5d5d5a]/40 cursor-not-allowed"
+                ${
+                  isComplete && !isSubmitting
+                    ? "bg-[#5d5d5a] text-[#f8f6f5] hover:bg-[#4a4a47]"
+                    : "bg-[rgba(93,93,90,0.15)] text-[#5d5d5a]/40 cursor-not-allowed"
                 }`}
             >
               {isSubmitting ? "Menyimpan..." : "Mulai pakai planno →"}

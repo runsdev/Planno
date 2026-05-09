@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { TaskInputStep } from "./taskInputStep";
 import { TaskPreviewStep } from "./taskPreviewStep";
+import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ParsedType = "Tugas" | "Acara";
@@ -21,79 +22,84 @@ export interface ParsedResult {
 
 type Step = "input" | "preview";
 
-// ─── Mock AI parser (swap with real AI call later) ───────────────────────────
-// TODO: Replace this with actual AI API call
-// Expected input: raw user string
-// Expected output: ParsedResult
-async function mockParseWithAI(input: string): Promise<ParsedResult> {
-  await new Promise((r) => setTimeout(r, 900)); // simulate latency
+// ─── Mapping helpers ──────────────────────────────────────────────────────────
 
-  const lower = input.toLowerCase();
-  const isEvent =
-    lower.includes("kuliah") ||
-    lower.includes("meeting") ||
-    lower.includes("rapat") ||
-    lower.includes("seminar") ||
-    lower.includes("kelas");
+function mapCategory(backendCat: string | null | undefined): ParsedCategory {
+  const map: Record<string, ParsedCategory> = {
+    academic: "Akademik",
+    work: "Kerja",
+    personal: "Personal",
+    health: "Lainnya",
+  };
+  return map[backendCat ?? ""] ?? "Lainnya";
+}
 
-  const isKerja =
-    lower.includes("meeting") ||
-    lower.includes("rapat") ||
-    lower.includes("kerja") ||
-    lower.includes("kantor") ||
-    lower.includes("pkl");
+function mapQuadrantToPriority(quadrant: string): ParsedPriority {
+  if (quadrant === "DO_FIRST") return "Tinggi";
+  if (quadrant === "SCHEDULE") return "Sedang";
+  return "Rendah";
+}
 
-  const isPersonal =
-    lower.includes("telepon") ||
-    lower.includes("jalan") ||
-    lower.includes("makan") ||
-    lower.includes("gym");
+function formatDuration(mins: number | null | undefined): string {
+  if (!mins) return "~1 jam";
+  if (mins < 60) return `~${mins} mnt`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `~${h} jam ${m} mnt` : `~${h} jam`;
+}
 
-  const isAkademik =
-    lower.includes("kuliah") ||
-    lower.includes("tugas") ||
-    lower.includes("laporan") ||
-    lower.includes("belajar") ||
-    lower.includes("uts") ||
-    lower.includes("seminar") ||
-    lower.includes("kelas");
+function formatDeadline(deadline: string | null | undefined): string {
+  if (!deadline) return "Tidak ditentukan";
+  try {
+    const dt = new Date(deadline.replace(" ", "T"));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dDay = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    const diffDays = Math.round(
+      (dDay.getTime() - today.getTime()) / 86_400_000,
+    );
+    const hasTime = deadline.includes(":");
+    const timeStr = hasTime
+      ? ` ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
+      : "";
+    if (diffDays < 0) return `Terlambat${timeStr}`;
+    if (diffDays === 0) return `Hari ini${timeStr}`;
+    if (diffDays === 1) return `Besok${timeStr}`;
+    if (diffDays <= 7) return `${diffDays} hari lagi${timeStr}`;
+    return deadline;
+  } catch {
+    return deadline;
+  }
+}
 
-  const isTinggi =
-    lower.includes("besok") ||
-    lower.includes("23:59") ||
-    lower.includes("urgent") ||
-    lower.includes("deadline");
+// ─── Real AI parser ───────────────────────────────────────────────────────────
 
-  const isSedang =
-    lower.includes("senin") ||
-    lower.includes("selasa") ||
-    lower.includes("rabu") ||
-    lower.includes("minggu");
+async function parseWithAI(input: string): Promise<ParsedResult> {
+  const parsed = await api.parseTask(input);
+  if (!parsed.success) throw new Error(parsed.error ?? "Gagal memproses input");
 
-  const deadlineMatch =
-    lower.match(/besok(?: jam ([\d:]+))?/) ||
-    lower.match(/(senin|selasa|rabu|kamis|jumat|sabtu|minggu)/);
+  const category = mapCategory(parsed.category);
+  const importanceMap: Record<ParsedCategory, string> = {
+    Akademik: "high",
+    Kerja: "high",
+    Personal: "medium",
+    Lainnya: "low",
+  };
 
-  const durasiMatch = lower.match(/(\d+)\s*jam/);
+  const scored = await api.scoreTask({
+    deadline: parsed.deadline,
+    importance: importanceMap[category],
+    duration_minutes: parsed.duration_minutes,
+    reschedule_count: 0,
+  });
 
   return {
-    type: isEvent ? "Acara" : "Tugas",
-    title: input
-      .replace(/besok.*|senin.*|selasa.*|jam\s[\d:]+.*/gi, "")
-      .trim()
-      .replace(/^\w/, (c) => c.toUpperCase()),
-    deadline: deadlineMatch
-      ? deadlineMatch[0].charAt(0).toUpperCase() + deadlineMatch[0].slice(1)
-      : "Tidak ditentukan",
-    duration: durasiMatch ? `~${durasiMatch[1]} jam` : "~1 jam",
-    category: isKerja
-      ? "Kerja"
-      : isPersonal
-      ? "Personal"
-      : isAkademik
-      ? "Akademik"
-      : "Lainnya",
-    priority: isTinggi ? "Tinggi" : isSedang ? "Sedang" : "Rendah",
+    type: "Tugas",
+    title: parsed.title ?? input,
+    deadline: formatDeadline(parsed.deadline),
+    duration: formatDuration(parsed.duration_minutes),
+    category,
+    priority: mapQuadrantToPriority(scored.quadrant),
   };
 }
 
@@ -106,11 +112,12 @@ interface AddTaskModalProps {
 }
 
 export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
-  const [step, setStep]           = useState<Step>("input");
-  const [input, setInput]         = useState("");
-  const [parsed, setParsed]       = useState<ParsedResult | null>(null);
+  const [step, setStep] = useState<Step>("input");
+  const [input, setInput] = useState("");
+  const [parsed, setParsed] = useState<ParsedResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-  const overlayRef                = useRef<HTMLDivElement>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   // Reset state setiap modal dibuka
   useEffect(() => {
@@ -119,13 +126,16 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
       setInput("");
       setParsed(null);
       setIsParsing(false);
+      setParseError(null);
     }
   }, [open]);
 
   // Close on Escape
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
@@ -135,11 +145,15 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
   const handleParse = async () => {
     if (!input.trim() || isParsing) return;
     setIsParsing(true);
+    setParseError(null);
     try {
-      // TODO: swap mockParseWithAI with real AI service call
-      const result = await mockParseWithAI(input);
+      const result = await parseWithAI(input);
       setParsed(result);
       setStep("preview");
+    } catch (err) {
+      setParseError(
+        err instanceof Error ? err.message : "Gagal memproses. Coba lagi.",
+      );
     } finally {
       setIsParsing(false);
     }
@@ -161,7 +175,9 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-      onMouseDown={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onMouseDown={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
     >
       {/* Modal card */}
       <div
@@ -170,7 +186,9 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <h2 className="text-[18px] font-semibold text-[#212121]">Tambah Dengan AI</h2>
+          <h2 className="text-[18px] font-semibold text-[#212121]">
+            Tambah Dengan AI
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -196,10 +214,20 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
             <TaskPreviewStep result={parsed} onEdit={handleEdit} />
           )}
 
+          {/* Error message */}
+          {parseError && (
+            <p className="text-[12.25px] font-medium text-[#e07b72]">
+              {parseError}
+            </p>
+          )}
+
           {/* Helper text */}
-          <p className="text-[12.25px] font-normal text-[#6b6b6b]">
-            AI akan mendeteksi apakah ini tugas atau acara, lalu mengisi detailnya otomatis.
-          </p>
+          {!parseError && (
+            <p className="text-[12.25px] font-normal text-[#6b6b6b]">
+              AI akan mendeteksi apakah ini tugas atau acara, lalu mengisi
+              detailnya otomatis.
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-1">
@@ -215,12 +243,17 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
               onClick={step === "input" ? handleParse : handleSave}
               disabled={!input.trim() || isParsing}
               className={`h-9 px-5 rounded-[10.5px] text-[13px] font-semibold transition-all cursor-pointer
-                ${input.trim() && !isParsing
-                  ? "bg-[#4a4a47] text-[#f8f6f5] hover:bg-[#333331]"
-                  : "bg-[rgba(93,93,90,0.12)] text-[#5d5d5a]/40 cursor-not-allowed"
+                ${
+                  input.trim() && !isParsing
+                    ? "bg-[#4a4a47] text-[#f8f6f5] hover:bg-[#333331]"
+                    : "bg-[rgba(93,93,90,0.12)] text-[#5d5d5a]/40 cursor-not-allowed"
                 }`}
             >
-              {isParsing ? "Memproses..." : step === "preview" ? "Simpan" : "Lanjut"}
+              {isParsing
+                ? "Memproses..."
+                : step === "preview"
+                  ? "Simpan"
+                  : "Lanjut"}
             </button>
           </div>
         </div>
