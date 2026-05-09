@@ -4,9 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { Search, Check } from "lucide-react";
 import { FocusTask } from "./focusModal";
 
-const PRIORITY_BADGE: Record<FocusTask["priority"], { bg: string; text: string }> = {
-  Tinggi: { bg: "bg-[#fdecea]",               text: "text-[#e07b72]" },
-  Sedang: { bg: "bg-[#fdf0e0]",               text: "text-[#d4974a]" },
+const PRIORITY_BADGE: Record<
+  FocusTask["priority"],
+  { bg: string; text: string }
+> = {
+  Tinggi: { bg: "bg-[#fdecea]", text: "text-[#e07b72]" },
+  Sedang: { bg: "bg-[#fdf0e0]", text: "text-[#d4974a]" },
   Rendah: { bg: "bg-[rgba(222,241,208,0.6)]", text: "text-[#6bab7e]" },
 };
 
@@ -14,7 +17,7 @@ interface FocusTaskSearchProps {
   tasks: FocusTask[];
   selected: FocusTask | null;
   onSelect: (task: FocusTask | null) => void;
-  completedTaskIds: number[]; // ← tambah
+  completedTaskIds: string[];
 }
 
 export function FocusTaskSearch({
@@ -23,13 +26,14 @@ export function FocusTaskSearch({
   onSelect,
   completedTaskIds,
 }: FocusTaskSearchProps) {
-  const [open, setOpen]   = useState(false);
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const ref               = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -39,7 +43,7 @@ export function FocusTaskSearch({
   const availableTasks = tasks.filter((t) => !completedTaskIds.includes(t.id));
 
   const filtered = availableTasks.filter((t) =>
-    t.title.toLowerCase().includes(query.toLowerCase())
+    t.title.toLowerCase().includes(query.toLowerCase()),
   );
 
   const handleSelect = (task: FocusTask) => {
@@ -55,15 +59,18 @@ export function FocusTaskSearch({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-[10.5px] font-semibold text-[#6b6b6b]">Mengerjakan</span>
+      <span className="text-[10.5px] font-semibold text-[#6b6b6b]">
+        Mengerjakan
+      </span>
 
       <div className="relative" ref={ref}>
         <div
           onClick={() => setOpen((p) => !p)}
           className={`flex items-center gap-2 h-9.5 px-3 rounded-[10.5px] border cursor-pointer transition-colors
-            ${open
-              ? "border-[rgba(93,93,90,0.4)] bg-white"
-              : "border-[rgba(33,33,33,0.1)] bg-white hover:border-[rgba(93,93,90,0.3)]"
+            ${
+              open
+                ? "border-[rgba(93,93,90,0.4)] bg-white"
+                : "border-[rgba(33,33,33,0.1)] bg-white hover:border-[rgba(93,93,90,0.3)]"
             }`}
         >
           <Search className="w-3.5 h-3.5 text-[#5d5d5a]/40 shrink-0" />
@@ -73,12 +80,17 @@ export function FocusTaskSearch({
                 {selected.title}
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className={`text-[10px] font-semibold px-2 py-px rounded-full ${PRIORITY_BADGE[selected.priority].bg} ${PRIORITY_BADGE[selected.priority].text}`}>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-px rounded-full ${PRIORITY_BADGE[selected.priority].bg} ${PRIORITY_BADGE[selected.priority].text}`}
+                >
                   {selected.priority}
                 </span>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); handleClear(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClear();
+                  }}
                   className="text-[#5d5d5a]/40 hover:text-[#5d5d5a] text-[14px] leading-none cursor-pointer"
                 >
                   ×
@@ -90,7 +102,10 @@ export function FocusTaskSearch({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(true);
+              }}
               placeholder="Cari tugas aktif..."
               className="flex-1 bg-transparent text-[12.25px] text-[#212121] placeholder:text-[#5d5d5a]/40 outline-none"
             />
@@ -107,7 +122,7 @@ export function FocusTaskSearch({
               </div>
             ) : (
               filtered.map((task) => {
-                const pb         = PRIORITY_BADGE[task.priority];
+                const pb = PRIORITY_BADGE[task.priority];
                 const isSelected = selected?.id === task.id;
                 return (
                   <button
@@ -121,10 +136,14 @@ export function FocusTaskSearch({
                       {task.title}
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] font-semibold px-2 py-px rounded-full ${pb.bg} ${pb.text}`}>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-px rounded-full ${pb.bg} ${pb.text}`}
+                      >
                         {task.priority}
                       </span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-[#6bab7e]" />}
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-[#6bab7e]" />
+                      )}
                     </div>
                   </button>
                 );

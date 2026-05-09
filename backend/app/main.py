@@ -1,5 +1,13 @@
+import sys
+import os
+
+# Make the project root importable so ai_engine can be resolved
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import tasks, onboarding, briefing
 
 app = FastAPI(
     title="Planno API",
@@ -14,6 +22,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(tasks.router)
+app.include_router(onboarding.router)
+app.include_router(briefing.router)
 
 
 @app.get("/")

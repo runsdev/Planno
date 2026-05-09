@@ -1,9 +1,18 @@
 "use client";
 
 import { Flame } from "lucide-react";
-import { Task } from "./plannerTypes";
+import { useEffect, useState } from "react";
+import { Task, Category } from "./plannerTypes";
 import { PRIORITY_SIDEBAR_BADGE } from "./plannerStyles";
 import { STREAK_DAYS } from "./plannerMockData";
+import { api, loadAIConfig, getPeakHoursFromConfig } from "@/lib/api";
+
+const CATEGORY_TO_BACKEND: Record<Category, string> = {
+  Akademik: "academic",
+  Kerja: "work",
+  Personal: "personal",
+  Lainnya: "personal",
+};
 
 function AIBadge() {
   return (
@@ -20,15 +29,23 @@ function Divider() {
 function SidebarPriorityCard({ task }: { task: Task }) {
   const pb = PRIORITY_SIDEBAR_BADGE[task.priority];
   return (
-    <div className={`bg-[#f8f6f5] rounded-[10.5px] px-[10.5px] py-[10.5px] flex flex-col gap-1.75 transition-opacity ${task.completed ? "opacity-50" : ""}`}>
-      <p className={`text-[12.25px] font-medium text-[#212121] leading-[17.5px] ${task.completed ? "line-through" : ""}`}>
+    <div
+      className={`bg-[#f8f6f5] rounded-[10.5px] px-[10.5px] py-[10.5px] flex flex-col gap-1.75 transition-opacity ${task.completed ? "opacity-50" : ""}`}
+    >
+      <p
+        className={`text-[12.25px] font-medium text-[#212121] leading-[17.5px] ${task.completed ? "line-through" : ""}`}
+      >
         {task.title}
       </p>
       <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-[10px] font-semibold ${pb.bg} ${pb.border} ${pb.text} rounded-full px-1.75 py-[1.75px]`}>
+        <span
+          className={`text-[10px] font-semibold ${pb.bg} ${pb.border} ${pb.text} rounded-full px-1.75 py-[1.75px]`}
+        >
           {task.priority}
         </span>
-        <span className="text-[10.5px] font-normal text-[#6b6b6b]">{task.deadline}</span>
+        <span className="text-[10.5px] font-normal text-[#6b6b6b]">
+          {task.deadline}
+        </span>
         <span className="text-[10px] font-normal text-[#6b6b6b] bg-[#e8e8e8] rounded-full px-1.75 py-[1.75px]">
           {task.duration}
         </span>
@@ -44,38 +61,87 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
   ].slice(0, 3);
 
   const completedCount = tasks.filter((t) => t.completed).length;
-  const totalCount     = tasks.length;
-  const progressPct    = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const totalCount = tasks.length;
+  const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  const [briefingText, setBriefingText] = useState<string | null>(null);
+
+  useEffect(() => {
+    const incompleteTasks = tasks.filter((t) => !t.completed);
+    if (incompleteTasks.length === 0) return;
+
+    const topForBriefing = [
+      ...incompleteTasks.filter((t) => t.priority === "Tinggi"),
+      ...incompleteTasks.filter((t) => t.priority === "Sedang"),
+    ]
+      .slice(0, 3)
+      .map((t) => ({
+        title: t.title,
+        deadline: t.deadline,
+        category: CATEGORY_TO_BACKEND[t.category],
+      }));
+
+    const config = loadAIConfig();
+    const peakHours = config
+      ? getPeakHoursFromConfig(config)
+      : ["09:00", "10:00", "11:00"];
+    const completionRate = totalCount > 0 ? completedCount / totalCount : 0;
+
+    api
+      .generateBriefing({
+        user_name: "Kamu",
+        top_tasks: topForBriefing,
+        peak_hours: peakHours,
+        completion_rate: completionRate,
+      })
+      .then((res) => {
+        if (res.success && res.briefing_text)
+          setBriefingText(res.briefing_text);
+      })
+      .catch(() => {
+        /* keep default null – show nothing */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <aside className="w-77.25 shrink-0 bg-white shadow-[-4px_0px_4px_0px_rgba(93,93,90,0.1)] px-6.25 py-4.5 flex flex-col gap-5 overflow-y-auto">
-
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">Hari ini</h3>
-          <AIBadge />
+      {briefingText && (
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">
+              Hari ini
+            </h3>
+            <AIBadge />
+          </div>
+          <p className="text-[14px] font-normal italic text-[#5d5d5a] leading-4.25">
+            {briefingText}
+          </p>
         </div>
-        <p className="text-[14px] font-normal italic text-[#5d5d5a] leading-4.25">
-          Selesaikan Laporan Capstone sebelum jam 12 saat energimu masih tinggi. Simpan tugas sosial untuk sore hari.
-        </p>
-      </div>
+      )}
 
-      <Divider />
+      {briefingText && <Divider />}
 
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
-          <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">Prioritas</h3>
+          <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">
+            Prioritas
+          </h3>
           <AIBadge />
         </div>
         <div className="flex flex-col gap-1.75">
-          {topTasks.map((task) => <SidebarPriorityCard key={task.id} task={task} />)}
+          {topTasks.map((task) => (
+            <SidebarPriorityCard key={task.id} task={task} />
+          ))}
         </div>
       </div>
 
       <Divider />
 
       <div className="flex flex-col gap-2.5">
-        <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">Progress</h3>
+        <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">
+          Progress
+        </h3>
         <div className="relative w-full h-1.75 rounded-full bg-[rgba(93,93,90,0.05)]">
           <div
             className="absolute left-0 top-0 h-1.75 rounded-full bg-[#8bbe97] transition-all duration-500"
@@ -90,7 +156,9 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
       <Divider />
 
       <div className="flex flex-col gap-2.5">
-        <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">Streak</h3>
+        <h3 className="text-[18px] font-semibold text-[#5d5d5a] capitalize tracking-[0.525px]">
+          Streak
+        </h3>
         <div className="flex items-center justify-between">
           {STREAK_DAYS.map((day, i) => (
             <div
@@ -104,7 +172,9 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
         </div>
         <div className="flex items-center gap-1.75">
           <Flame className="w-3.5 h-3.5 text-[#e07b72]" />
-          <span className="text-[10.5px] font-medium text-[#5d5d5a]">3 hari berturut-turut</span>
+          <span className="text-[10.5px] font-medium text-[#5d5d5a]">
+            3 hari berturut-turut
+          </span>
         </div>
       </div>
     </aside>

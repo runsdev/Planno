@@ -1,5 +1,7 @@
 "use client";
 
+import { signIn } from "next-auth/react";
+
 // ─── Flower SVG ──────────────────────────────────────────────────────────────
 function Flower({
   size,
@@ -70,49 +72,52 @@ export default function LoginPage() {
       className="relative min-h-screen w-full bg-[#f8f6f5] overflow-hidden flex items-center justify-center"
       style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
     >
-        {/* --- Decorative flowers --- */}
+      {/* --- Decorative flowers --- */}
 
-        {/* Top-right: large pink flower */}
-        <div className="absolute -top-15 -right-15 pointer-events-none z-0">
-            <Flower size={400} fill="#fce4e4" rotate={30} />
+      {/* Top-right: large pink flower */}
+      <div className="absolute -top-15 -right-15 pointer-events-none z-0">
+        <Flower size={400} fill="#fce4e4" rotate={30} />
+      </div>
+
+      {/* Top-right: small blue flower */}
+      <div className="absolute top-7.5 right-80 pointer-events-none z-10">
+        <Flower size={100} fill="#d1ecf1" rotate={65} />
+      </div>
+
+      {/* Bottom-left: large pink flower */}
+      <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
+        <Flower size={400} fill="#fce4e4" rotate={30} />
+      </div>
+
+      {/* Bottom-left: small blue flower */}
+      <div className="absolute bottom-7.5 left-80 pointer-events-none z-10">
+        <Flower size={100} fill="#d1ecf1" rotate={65} />
+      </div>
+
+      {/* ── Center card ── */}
+      <div className="flex flex-col items-center gap-6 z-10">
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-4">
+          <h1 className="text-[40px] font-bold italic text-[#5d5d5a] leading-none">
+            planno
+          </h1>
+          <p className="text-base font-normal text-[#5d5d5a]">
+            Rencanakan harimu lebih cerdas.
+          </p>
         </div>
 
-        {/* Top-right: small blue flower */}
-        <div className="absolute top-7.5 right-80 pointer-events-none z-10">
-            <Flower size={100} fill="#d1ecf1" rotate={65} />
+        {/* Card */}
+        <div className="bg-white rounded-[14px] shadow-[0px_4px_4px_0px_rgba(33,33,33,0.12)] w-100 px-7.5 py-6 flex flex-col items-center gap-4">
+          {/* Google login button */}
+          <button
+            onClick={() => signIn("google", { callbackUrl: "/planner" })}
+            className="w-85 h-10.25 flex items-center justify-center gap-2.5 bg-white border border-[rgba(93,93,90,0.2)] rounded-[10.5px] text-sm font-semibold text-[#2d2d2d] hover:bg-[#f5f5f5] transition-colors cursor-pointer"
+          >
+            Masuk dengan Google
+            <GoogleIcon />
+          </button>
         </div>
-
-        {/* Bottom-left: large pink flower */}
-        <div className="absolute -bottom-15 -left-15 pointer-events-none z-0">
-            <Flower size={400} fill="#fce4e4" rotate={30}  />
-        </div>
-
-        {/* Bottom-left: small blue flower */}
-        <div className="absolute bottom-7.5 left-80 pointer-events-none z-10">
-            <Flower size={100} fill="#d1ecf1" rotate={65} />
-        </div>
-
-        {/* ── Center card ── */}
-        <div className="flex flex-col items-center gap-6 z-10">
-            {/* Logo */}
-            <div className="flex flex-col items-center gap-4">
-                <h1 className="text-[40px] font-bold italic text-[#5d5d5a] leading-none">
-                    planno
-                </h1>
-                <p className="text-base font-normal text-[#5d5d5a]">
-                    Rencanakan harimu lebih cerdas.
-                </p>
-            </div>
-
-            {/* Card */}
-            <div className="bg-white rounded-[14px] shadow-[0px_4px_4px_0px_rgba(33,33,33,0.12)] w-100 px-7.5 py-6 flex flex-col items-center gap-4">
-                {/* Google login button */}
-                <button className="w-85 h-10.25 flex items-center justify-center gap-2.5 bg-white border border-[rgba(93,93,90,0.2)] rounded-[10.5px] text-sm font-semibold text-[#2d2d2d] hover:bg-[#f5f5f5] transition-colors cursor-pointer">
-                    Masuk dengan Google
-                    <GoogleIcon />
-                </button>
-            </div>
-        </div>
+      </div>
     </div>
   );
 }
