@@ -1,5 +1,8 @@
 import sys
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Make the project root importable so ai_engine can be resolved
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -17,7 +20,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://api.planno.runsha.dev"],  # Next.js dev server
+    allow_origins=[os.getenv("FRONTEND_URL")],  # Next.js dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
