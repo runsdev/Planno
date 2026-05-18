@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { TaskInputStep } from "./taskInputStep";
 import { TaskPreviewStep } from "./taskPreviewStep";
 import { api } from "@/lib/api";
+import { formatDeadline } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ParsedType = "Tugas" | "Acara";
@@ -14,7 +15,8 @@ export type ParsedPriority = "Tinggi" | "Sedang" | "Rendah";
 export interface ParsedResult {
   type: ParsedType;
   title: string;
-  deadline: string;
+  deadline: string; // human-readable display label
+  deadlineISO: string | null; // raw ISO datetime for DB storage
   duration: string;
   category: ParsedCategory;
   priority: ParsedPriority;
@@ -48,30 +50,6 @@ function formatDuration(mins: number | null | undefined): string {
   return m > 0 ? `~${h} jam ${m} mnt` : `~${h} jam`;
 }
 
-function formatDeadline(deadline: string | null | undefined): string {
-  if (!deadline) return "Tidak ditentukan";
-  try {
-    const dt = new Date(deadline.replace(" ", "T"));
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dDay = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
-    const diffDays = Math.round(
-      (dDay.getTime() - today.getTime()) / 86_400_000,
-    );
-    const hasTime = deadline.includes(":");
-    const timeStr = hasTime
-      ? ` ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
-      : "";
-    if (diffDays < 0) return `Terlambat${timeStr}`;
-    if (diffDays === 0) return `Hari ini${timeStr}`;
-    if (diffDays === 1) return `Besok${timeStr}`;
-    if (diffDays <= 7) return `${diffDays} hari lagi${timeStr}`;
-    return deadline;
-  } catch {
-    return deadline;
-  }
-}
-
 // ─── Real AI parser ───────────────────────────────────────────────────────────
 
 async function parseWithAI(input: string): Promise<ParsedResult> {
@@ -97,6 +75,7 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
     type: "Tugas",
     title: parsed.title ?? input,
     deadline: formatDeadline(parsed.deadline),
+    deadlineISO: parsed.deadline ?? null,
     duration: formatDuration(parsed.duration_minutes),
     category,
     priority: mapQuadrantToPriority(scored.quadrant),

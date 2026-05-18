@@ -10,6 +10,7 @@ import { FilterType, Task } from "@/components/planner/plannerTypes";
 // import { INITIAL_TASKS } from "@/components/planner/plannerMockData";
 import { AddTaskModal, ParsedResult } from "@/components/add-task/addTaskModal";
 import { FocusTask } from "@/components/focus/focusModal";
+import { getDeadlineColor } from "@/lib/utils";
 
 type TaskProgress = Record<
   string,
@@ -20,15 +21,10 @@ type TaskProgress = Record<
 >;
 
 function parsedToTask(result: ParsedResult): Omit<Task, "id"> {
-  const dl = result.deadline.toLowerCase();
-  const deadlineColor =
-    dl.includes("hari ini") || dl.includes("terlambat")
-      ? "text-[#e07b72]"
-      : undefined;
   return {
     title: result.title,
-    deadline: result.deadline,
-    deadlineColor,
+    deadline: result.deadlineISO,
+    deadlineColor: getDeadlineColor(result.deadlineISO),
     duration: result.duration,
     category: result.category,
     priority: result.priority,
@@ -194,7 +190,7 @@ function PlannerContent() {
         <div
           className={`flex flex-1 overflow-hidden ${activeView !== "Calendar" ? "hidden" : ""}`}
         >
-          <CalendarView />
+          <CalendarView tasks={tasks} />
         </div>
         <RightSidebar tasks={tasks} />
       </div>
