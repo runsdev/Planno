@@ -31,7 +31,11 @@ export async function PATCH(
         rescheduleCount: body.rescheduleCount,
       }),
       ...(body.title !== undefined && { title: body.title }),
-      ...(body.deadline !== undefined && { deadline: body.deadline }),
+      ...(body.deadline !== undefined && {
+        deadline: body.deadline
+          ? new Date(body.deadline.replace(" ", "T"))
+          : null,
+      }),
       ...(body.priority !== undefined && { priority: body.priority }),
       ...(body.category !== undefined && { category: body.category }),
     },

@@ -63,19 +63,19 @@ model VerificationToken {
 // ─── Task ─────────────────────────────────────────────────────────────────────
 
 model Task {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String   @db.ObjectId
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
   title           String
-  deadline        String
+  deadline        DateTime?
   deadlineColor   String?
   duration        String
   category        String
   priority        String
-  completed       Boolean  @default(false)
+  completed       Boolean   @default(false)
   actualSeconds   Int?
-  rescheduleCount Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  rescheduleCount Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

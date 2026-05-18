@@ -12,7 +12,7 @@ export type FilterType =
 export interface Task {
   id: string;
   title: string;
-  deadline: string;
+  deadline: string | null;
   deadlineColor?: string;
   duration: string;
   category: Category;
@@ -24,7 +24,7 @@ export interface Task {
 
 // ... sisanya tidak berubah
 export interface CalendarEvent {
-  id: number;
+  id: string | number;
   title: string;
   startHour: number;
   endHour: number;

@@ -28,7 +28,9 @@ export async function POST(request: Request) {
     data: {
       userId: session.user.id,
       title: body.title,
-      deadline: body.deadline,
+      deadline: body.deadline
+        ? new Date(body.deadline.replace(" ", "T"))
+        : null,
       deadlineColor: body.deadlineColor ?? null,
       duration: body.duration,
       category: body.category,
