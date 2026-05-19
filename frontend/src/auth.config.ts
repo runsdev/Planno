@@ -18,14 +18,16 @@ export const authConfig = {
   },
   session: { strategy: "jwt" as const },
   callbacks: {
-    // Persist user.id into the JWT on first sign-in
+    // Persist user.id into the JWT on first sign-in (full logic overridden in auth.ts)
     jwt({ token, user }) {
       if (user?.id) token.id = user.id;
       return token;
     },
-    // Expose id from JWT to the session object
+    // Expose id and onboardingCompleted from JWT to the session object
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
+      (session.user as { onboardingCompleted?: boolean }).onboardingCompleted =
+        (token.onboardingCompleted as boolean) ?? false;
       return session;
     },
   },

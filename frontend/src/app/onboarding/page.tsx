@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ToggleGroup } from "@/components/ui/toggleGroup";
 import { TimeRangeInput } from "@/components/ui/timeRangeInput";
 import { Sparkles } from "lucide-react";
@@ -65,6 +66,7 @@ const defaultPreferences: Preferences = {
 // ─── Onboarding Page ──────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const [preferences, setPreferences] =
     useState<Preferences>(defaultPreferences);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,6 +93,13 @@ export default function OnboardingPage() {
     };
 
     try {
+      // Persist preferences to DB so onboardingCompleted becomes true
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: prefs }),
+      });
+
       const config = await api.parseOnboarding(prefs);
       localStorage.setItem("planno_preferences", JSON.stringify(prefs));
       localStorage.setItem("planno_ai_config", JSON.stringify(config));
@@ -99,6 +108,8 @@ export default function OnboardingPage() {
       console.error("Onboarding API error:", err);
       localStorage.setItem("planno_preferences", JSON.stringify(prefs));
     } finally {
+      // Refresh JWT so onboardingCompleted flips to true in middleware
+      await updateSession();
       setIsSubmitting(false);
       router.push("/planner");
     }

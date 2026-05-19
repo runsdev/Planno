@@ -24,6 +24,20 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/planner", nextUrl.origin));
   }
 
+  // Redirect new (authenticated) users who haven't completed onboarding
+  const onboardingCompleted =
+    (session?.user as { onboardingCompleted?: boolean })?.onboardingCompleted ??
+    false;
+  const isOnboardingPath = nextUrl.pathname.startsWith("/onboarding");
+  if (isLoggedIn && !onboardingCompleted && !isOnboardingPath) {
+    return NextResponse.redirect(new URL("/onboarding", nextUrl.origin));
+  }
+
+  // Redirect users who completed onboarding away from that page
+  if (isLoggedIn && onboardingCompleted && isOnboardingPath) {
+    return NextResponse.redirect(new URL("/planner", nextUrl.origin));
+  }
+
   return NextResponse.next();
 });
 

@@ -7,6 +7,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      onboardingCompleted: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -19,4 +20,31 @@ declare module "next-auth" {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user, trigger }) {
+      // Persist user.id into the JWT on first sign-in
+      if (user?.id) token.id = user.id;
+
+      // Check onboarding status from DB on first sign-in or explicit refresh
+      if (user?.id || trigger === "update") {
+        const userId = (token.id as string) ?? user?.id;
+        if (userId) {
+          const prefs = await prisma.userPreferences.findUnique({
+            where: { userId },
+            select: { userId: true },
+          });
+          token.onboardingCompleted = !!prefs;
+        }
+      }
+
+      return token;
+    },
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string;
+      session.user.onboardingCompleted =
+        (token.onboardingCompleted as boolean) ?? false;
+      return session;
+    },
+  },
 });
