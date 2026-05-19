@@ -1,0 +1,25 @@
+TEST CASE ESTIMATION & ALLOCATION - PLANNO
+,,,,
+INFORMASI PENGUJIAN,,,,
+Jumlah Penguji (Personil),2,,,
+Durasi Kerja (Menit),480,,,
+Rerata Waktu per Test Case (Menit),10,,,
+Total Test Case yang Dapat Dieksekusi,"= (2 × 480) / 10 = 96",,,
+,,,,
+TABEL ESTIMASI & ALOKASI TEST CASE,,,,
+No.,Operations,Occurrence Rate (per 100),Occurrence Probabilities,Number of Test Cases
+1,Login / Autentikasi Google,5,0.05,5
+2,Onboarding Setup (Isi Preferensi),2,0.02,2
+3,Tambah Task Baru (Add Task),17,0.17,17
+4,Lihat Planner (Kalender / Kanban),18,0.18,18
+5,Update Task (Edit / Tandai Selesai),12,0.12,12
+6,Hapus Task,5,0.05,5
+7,Parse Task – NLP AI Engine,10,0.10,10
+8,Score Prioritas Task – AI Prioritization,8,0.08,8
+9,Daily Briefing – AI Briefing,4,0.04,4
+10,Sesi Fokus (Focus Session / Pomodoro),6,0.06,6
+11,Lihat Profil Pengguna,4,0.04,4
+12,Update Profil / Pengaturan,3,0.03,3
+13,Pencarian / Filter Task,2,0.02,2
+,,,Total,96
+,,,,

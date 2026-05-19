@@ -1,0 +1,20 @@
+PROFIL OPERASIONAL PERANGKAT LUNAK - PLANNO
+Problem: Planno adalah aplikasi manajemen tugas berbasis AI yang membantu pengguna merencanakan dan memprioritaskan pekerjaan secara cerdas. Masalah utama mencakup keandalan autentikasi, akurasi NLP parser tugas, ketepatan skor prioritas AI, sinkronisasi data tugas real-time, dan alur onboarding pengguna baru.
+
+,,,,,
+Operation Mode,Initiator Mode,Operation List,Occurrence Rate (per 100 interaksi),Occurrence Probabilities,Keterangan
+Normal Mode (Pengguna Terautentikasi),User-Initiated,Login / Autentikasi Google,5,0.05,Pengguna melakukan sign-in melalui Google OAuth
+Normal Mode (Pengguna Baru),User-Initiated,Onboarding Setup (Isi Preferensi),2,0.02,Pengguna baru mengisi preferensi kerja pertama kali
+Normal Mode,User-Initiated,Tambah Task Baru (Add Task),17,0.17,Pengguna menambahkan task melalui modal input natural language
+Normal Mode,User-Initiated,Lihat Planner (Kalender / Kanban),18,0.18,Pengguna membuka halaman planner dan melihat daftar task
+Normal Mode,User-Initiated,Update Task (Edit / Tandai Selesai),12,0.12,Pengguna mengubah status/detail task yang sudah ada
+Normal Mode,User-Initiated,Hapus Task,5,0.05,Pengguna menghapus task dari daftar
+AI Engine Mode,System-Initiated,Parse Task (NLP AI Engine),10,0.10,Backend mem-parsing deskripsi task menjadi data terstruktur
+AI Engine Mode,System-Initiated,Score Prioritas Task (AI Prioritization),8,0.08,Backend menghitung skor prioritas dan kuadran Eisenhower
+AI Engine Mode,User/System-Initiated,Lihat Daily Briefing (AI Briefing),4,0.04,Pengguna meminta atau sistem menghasilkan ringkasan harian
+Normal Mode,User-Initiated,Sesi Fokus (Focus Session / Pomodoro),6,0.06,Pengguna memulai sesi fokus untuk mengerjakan task
+Normal Mode,User-Initiated,Lihat Profil Pengguna,4,0.04,Pengguna membuka halaman profil
+Normal Mode,User-Initiated,Update Profil / Pengaturan,3,0.03,Pengguna mengubah nama atau preferensi di halaman settings
+Normal Mode,User-Initiated,Pencarian / Filter Task,2,0.02,Pengguna mencari task berdasarkan kata kunci
+,,,,,
+Total,,13 operasi,96,1.00,

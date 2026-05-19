@@ -32,9 +32,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (userId) {
           const prefs = await prisma.userPreferences.findUnique({
             where: { userId },
-            select: { userId: true },
+            select: {
+              focusTime: true,
+              workStyle: true,
+              focusDuration: true,
+              taskType: true,
+            },
           });
-          token.onboardingCompleted = !!prefs;
+          // Onboarding is complete only when all required fields are filled
+          token.onboardingCompleted =
+            !!prefs &&
+            !!prefs.focusTime &&
+            !!prefs.workStyle &&
+            !!prefs.focusDuration &&
+            !!prefs.taskType;
         }
       }
 

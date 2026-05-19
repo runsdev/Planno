@@ -1,0 +1,128 @@
+TABEL TEST CASE - PLANNO,,,,,,
+Mode Uji,Otomatis (Jest + Playwright + Pytest),,,,
+Tools yang Digunakan,"Jest (unit frontend), Playwright (E2E frontend), Pytest (backend AI engine)",,,,
+Requirement & Spesifikasi Test Environment,"Node.js ≥ 18, Python ≥ 3.10, MongoDB (dev), Google OAuth test account, env: .env.test, Backend running on localhost:8000, Frontend running on localhost:3000",,,,
+,,,,,,
+Operations,Test Condition,Action,Input Specification,Output Specification (Expected Results),Notes
+,,,,,,
+=== 1. LOGIN / AUTENTIKASI GOOGLE (5 test cases) ===,,,,,,
+Login / Autentikasi Google,TC-AUTH-01: Login berhasil dengan akun Google valid,Pengguna mengklik tombol "Sign in with Google" dan menyelesaikan OAuth flow,Akun Google valid (email terverifikasi),Pengguna diarahkan ke /planner (jika onboarding selesai) atau /onboarding (jika baru),E2E - Playwright
+Login / Autentikasi Google,TC-AUTH-02: Pengguna baru diarahkan ke halaman onboarding setelah login,Login pertama kali dengan akun Google yang belum pernah masuk,Akun Google baru yang belum memiliki UserPreferences di DB,Redirect ke /onboarding; session.user.onboardingCompleted = false,E2E - Playwright
+Login / Autentikasi Google,TC-AUTH-03: Pengguna lama diarahkan ke /planner setelah login,Login dengan akun yang sudah pernah onboarding,Akun Google yang sudah memiliki UserPreferences di DB,Redirect langsung ke /planner; tidak melalui /onboarding,E2E - Playwright
+Login / Autentikasi Google,TC-AUTH-04: Pengguna tidak terauthentikasi diarahkan ke /auth/login,Akses URL /planner tanpa session aktif,Request GET /planner tanpa cookie session,Redirect ke /auth/login?callbackUrl=%2Fplanner,Middleware test
+Login / Autentikasi Google,TC-AUTH-05: Pengguna terautentikasi tidak dapat mengakses /auth/login,Akses URL /auth/login saat sudah login,Request GET /auth/login dengan session aktif,Redirect ke /planner,Middleware test
+,,,,,,
+=== 2. ONBOARDING SETUP (2 test cases) ===,,,,,,
+Onboarding Setup,TC-OBD-01: Submit onboarding berhasil dengan semua field terisi,Pengguna mengisi semua preferensi dan klik Finish,focusTime=pagi; workStyle=deep-focus; workHours={start:08:00; end:17:00}; focusDuration=50 menit; taskType=early,UserPreferences tersimpan di DB; session diperbarui (onboardingCompleted=true); redirect ke /planner,E2E + API
+Onboarding Setup,TC-OBD-02: Tombol Finish tidak aktif jika ada field wajib yang kosong,Pengguna belum mengisi semua field wajib,focusTime=''; workStyle='deep-focus'; focusDuration=''; taskType='',Tombol submit disabled; tidak ada request ke API; form tetap di halaman onboarding,Unit test (React)
+,,,,,,
+=== 3. TAMBAH TASK BARU / ADD TASK (17 test cases) ===,,,,,,
+Tambah Task Baru,TC-TASK-ADD-01: Tambah task dengan input natural language lengkap,Pengguna mengetik deskripsi task dan submit,Input: "Kerjakan laporan keuangan besok jam 5 sore durasi 2 jam",Task tersimpan di DB dengan title; deadline; duration; category; priority terisi,Integration
+Tambah Task Baru,TC-TASK-ADD-02: Tambah task dengan input minimal (hanya judul),Pengguna mengetik judul singkat tanpa deadline,Input: "Beli susu",Task tersimpan; deadline=null; duration=null; priority default,Integration
+Tambah Task Baru,TC-TASK-ADD-03: Validasi input task kosong,Pengguna mencoba submit tanpa input,Input: "" (string kosong),Tombol submit disabled atau pesan error ditampilkan; tidak ada record baru di DB,Unit test
+Tambah Task Baru,TC-TASK-ADD-04: Input task dengan karakter khusus,Pengguna memasukkan karakter HTML/SQL injection,Input: "<script>alert(1)</script>",Task tersimpan sebagai teks biasa; tidak ada eksekusi script; output di-escape,Security test
+Tambah Task Baru,TC-TASK-ADD-05: Tambah task saat backend AI tidak tersedia,AI endpoint /api/tasks/parse mengembalikan error,Input: "Presentasi klien Jumat"; backend down,Task preview tetap tampil dengan nilai default; user dapat tetap menyimpan task,Fault tolerance
+Tambah Task Baru,TC-TASK-ADD-06: Deadline yang sudah lewat (masa lalu) terdeteksi,Pengguna memasukkan deadline yang sudah terlewat,Input: "Review dokumen kemarin jam 10",Parser mengembalikan deadline; UI menampilkan warning deadlineColor merah/warning,UI validation
+Tambah Task Baru,TC-TASK-ADD-07: Task dengan durasi sangat panjang (>480 menit),Input durasi melebihi batas wajar,Input: "Kerjakan proyek besar selama 2 minggu",Task tersimpan; duration dikonversi dalam menit; tidak ada error server,Edge case
+Tambah Task Baru,TC-TASK-ADD-08: Dua pengguna berbeda menyimpan task dengan judul sama,Dua akun berbeda membuat task berjudul sama,User A dan User B keduanya: input "Belajar algoritma",Masing-masing hanya melihat task miliknya; tidak ada kebocoran data lintas user,Isolation test
+Tambah Task Baru,TC-TASK-ADD-09: Task step 1 – preview ditampilkan dengan benar,Pengguna mengisi input dan menekan next ke preview step,Input: "Meeting dengan tim marketing Kamis jam 3",Preview step menampilkan title; deadline; duration; category; priority yang diparsing AI,E2E
+Tambah Task Baru,TC-TASK-ADD-10: Task step 2 – pengguna dapat kembali ke step 1 dan edit,Pengguna di preview step menekan tombol back,Di preview step dengan data parsed; klik tombol back,Kembali ke step 1 dengan input sebelumnya masih tersedia,E2E
+Tambah Task Baru,TC-TASK-ADD-11: POST /api/tasks – response 201 dengan body task,Request POST ke endpoint tasks,Body: {title; deadline; duration; category; priority; completed:false},Response 201 JSON dengan semua field task termasuk id dan createdAt,API test
+Tambah Task Baru,TC-TASK-ADD-12: POST /api/tasks – tanpa session mengembalikan 401,Request POST tanpa Authorization,Body valid; tanpa session cookie,Response 401 {error:"Unauthorized"},API test
+Tambah Task Baru,TC-TASK-ADD-13: Kategori task terisi otomatis dari AI Parser,Pengguna input task dengan konteks kategori jelas,Input: "Olahraga lari 5km besok pagi",Field category diisi oleh parser (contoh: "Health" atau "Personal"),Integration
+Tambah Task Baru,TC-TASK-ADD-14: Priority score dikalkulasi setelah task dibuat,Task dengan deadline dekat mendapat skor tinggi,Task baru dengan deadline 2 jam ke depan; importance=high,priority_score > 70; quadrant = "Do First" (Urgent & Important),Integration
+Tambah Task Baru,TC-TASK-ADD-15: Tambah banyak task sekaligus (performance),Pengguna menambahkan 10 task berturut-turut,10 request POST /api/tasks secara berurutan,Semua 10 task tersimpan; tidak ada error; response time tiap request < 2 detik,Performance
+Tambah Task Baru,TC-TASK-ADD-16: Modal add task dapat dibuka dan ditutup,Pengguna membuka lalu menutup modal tanpa submit,Klik tombol add task → modal muncul → klik Close/X,Modal tertutup; tidak ada task baru di DB; state direset,UI test
+Tambah Task Baru,TC-TASK-ADD-17: Task tersimpan muncul di daftar planner,Setelah task berhasil dibuat; task muncul di UI,Tambah task baru; lihat planner,Task baru muncul di daftar tanpa perlu refresh manual,E2E
+,,,,,,
+=== 4. LIHAT PLANNER – KALENDER / KANBAN (18 test cases) ===,,,,,,
+Lihat Planner,TC-PLAN-01: Halaman planner tampil untuk pengguna terautentikasi,GET /planner dengan session valid,Session aktif; akses /planner,Halaman planner ter-render dengan daftar task milik pengguna; tidak ada task milik user lain,E2E
+Lihat Planner,TC-PLAN-02: Planner kosong untuk pengguna tanpa task,Pengguna baru belum punya task,Akun valid; 0 task di DB,Planner menampilkan empty state (ilustrasi/teks "Belum ada task"),UI test
+Lihat Planner,TC-PLAN-03: View Kanban menampilkan kolom berdasarkan status,Pengguna membuka tab Kanban,Task dengan completed=false dan completed=true,Kolom "To Do" dan "Done" terpisah; task muncul di kolom yang sesuai,UI test
+Lihat Planner,TC-PLAN-04: View Kalender menampilkan task di tanggal yang benar,Pengguna membuka tab Kalender,Task dengan deadline spesifik (misal: 2026-06-01),Task muncul pada sel tanggal 1 Juni 2026 di view kalender,UI test
+Lihat Planner,TC-PLAN-05: Switch antara view Kanban dan Kalender,Pengguna mengklik toggle view,Mulai di Kanban view; klik toggle Kalender,View berganti ke Kalender; task ditampilkan sesuai format kalender; tidak ada error,E2E
+Lihat Planner,TC-PLAN-06: GET /api/tasks mengembalikan task milik user,Request GET /api/tasks dengan session valid,Pengguna A memiliki 3 task di DB,Response 200 JSON array berisi tepat 3 task; semua task.userId = pengguna A,API test
+Lihat Planner,TC-PLAN-07: GET /api/tasks tanpa session mengembalikan 401,Request tanpa session,GET /api/tasks tanpa cookie,Response 401 {error:"Unauthorized"},API test
+Lihat Planner,TC-PLAN-08: Task ditampilkan dengan deadline color yang benar,Task dengan deadline berbeda menampilkan warna indikator,Task 1: deadline besok; Task 2: deadline 7 hari lagi; Task 3: deadline sudah lewat,Masing-masing menampilkan warna urgensi berbeda (merah/kuning/hijau) sesuai deadlineColor,UI test
+Lihat Planner,TC-PLAN-09: Task completed ditandai berbeda dari task aktif,Task dengan completed=true,Mix task selesai dan aktif di planner,Task completed memiliki tampilan visual berbeda (strikethrough/opaque),UI test
+Lihat Planner,TC-PLAN-10: Right sidebar menampilkan detail task saat diklik,Pengguna mengklik sebuah task,Klik task di planner,Right sidebar terbuka dengan detail task (title; deadline; priority; duration; category),E2E
+Lihat Planner,TC-PLAN-11: Planner menampilkan task berurutan berdasarkan createdAt,Task baru muncul di atas,Beberapa task dengan waktu buat berbeda,Task diurutkan dari terbaru ke terlama (desc),UI/API test
+Lihat Planner,TC-PLAN-12: Planner me-refresh data setelah task baru ditambah,Setelah add task berhasil; planner terupdate,Tambah task baru melalui modal; tutup modal,Task baru langsung muncul di planner tanpa reload halaman,E2E
+Lihat Planner,TC-PLAN-13: Task dengan priority tinggi ditampilkan dengan indikator berbeda,Task priority score tinggi memiliki visual berbeda,Task dengan priority_score > 80,Badge/warna indikator prioritas tinggi terlihat di card task,UI test
+Lihat Planner,TC-PLAN-14: Planner dengan banyak task (>50) tidak lag,Performance test dengan data banyak,50 task di DB untuk satu pengguna; akses halaman planner,Halaman ter-render dalam < 3 detik; scroll lancar tanpa freezing,Performance
+Lihat Planner,TC-PLAN-15: Planner menampilkan kategori task,Task dengan berbagai kategori,Task dengan category: Work; Health; Personal masing-masing ada,Label kategori terlihat pada card task di planner,UI test
+Lihat Planner,TC-PLAN-16: Pengguna tidak dapat melihat task milik pengguna lain,Isolasi data antar pengguna,Pengguna A login; di DB ada task milik Pengguna B,Response hanya berisi task Pengguna A; task Pengguna B tidak tampil,Security/Isolation
+Lihat Planner,TC-PLAN-17: Kalender navigasi bulan berfungsi,Pengguna navigasi ke bulan berikutnya,Di view kalender; klik tombol next month,Kalender menampilkan bulan berikutnya; task bulan tersebut ditampilkan,E2E
+Lihat Planner,TC-PLAN-18: Halaman planner tidak dapat diakses tanpa login,User tidak terautentikasi akses /planner,Request GET /planner tanpa session,Redirect ke /auth/login dengan callbackUrl=/planner,Middleware test
+,,,,,,
+=== 5. UPDATE TASK – EDIT / TANDAI SELESAI (12 test cases) ===,,,,,,
+Update Task,TC-UPD-01: Tandai task sebagai selesai,Pengguna mencentang checkbox task,PATCH /api/tasks/{id} dengan {completed: true},Response 200; task.completed = true di DB; tampilan berubah di UI,E2E + API
+Update Task,TC-UPD-02: Batalkan penandaan selesai (uncheck),Pengguna menguncheck task yang sudah selesai,PATCH /api/tasks/{id} dengan {completed: false},Response 200; task.completed = false; tampilan kembali normal,E2E + API
+Update Task,TC-UPD-03: Edit judul task,Pengguna mengubah judul task,PATCH /api/tasks/{id} dengan {title: "Judul Baru"},Response 200; title terupdate di DB dan UI,E2E + API
+Update Task,TC-UPD-04: Update deadline task,Pengguna mengubah deadline,PATCH /api/tasks/{id} dengan {deadline: "2026-12-31T23:59"},Response 200; deadline tersimpan sebagai Date yang benar di DB,API test
+Update Task,TC-UPD-05: Update task milik pengguna lain (forbidden),Pengguna A mencoba update task Pengguna B,PATCH /api/tasks/{id_task_milik_B} dari session Pengguna A,Response 404 {error: "Not found"}; task tidak berubah di DB,Security test
+Update Task,TC-UPD-06: Update task dengan id tidak valid,Request dengan id yang tidak ada di DB,PATCH /api/tasks/id-tidak-ada body valid,Response 404 {error: "Not found"},API test
+Update Task,TC-UPD-07: Update rescheduleCount ketika task dijadwal ulang,Task dijadwal ulang oleh pengguna,PATCH /api/tasks/{id} dengan {rescheduleCount: 1},rescheduleCount bertambah; priority_score dikalkulasi ulang jika diperlukan,Integration
+Update Task,TC-UPD-08: Update actualSeconds setelah sesi fokus selesai,Setelah sesi fokus; waktu aktual tersimpan,PATCH /api/tasks/{id} dengan {actualSeconds: 2700},actualSeconds tersimpan di DB; ditampilkan di detail task,API test
+Update Task,TC-UPD-09: Update task tanpa session mengembalikan 401,Request tanpa autentikasi,PATCH /api/tasks/{id} tanpa session cookie,Response 401 {error: "Unauthorized"},API test
+Update Task,TC-UPD-10: Update priority task secara manual,Pengguna mengubah prioritas task,PATCH /api/tasks/{id} dengan {priority: 90},priority terupdate di DB; card task menampilkan prioritas baru,API + UI test
+Update Task,TC-UPD-11: Update kategori task,Pengguna mengubah kategori,PATCH /api/tasks/{id} dengan {category: "Work"},category terupdate; label kategori di planner berubah,API + UI test
+Update Task,TC-UPD-12: Update task dengan body kosong tidak merusak data,Request PATCH dengan body {},PATCH /api/tasks/{id} dengan body {},Response 200; data task tidak berubah sama sekali (semua field tetap),API test
+,,,,,,
+=== 6. HAPUS TASK (5 test cases) ===,,,,,,
+Hapus Task,TC-DEL-01: Hapus task berhasil,Pengguna menghapus task miliknya sendiri,DELETE /api/tasks/{id} dengan session valid,Response 200; task tidak ada lagi di DB; hilang dari UI planner,E2E + API
+Hapus Task,TC-DEL-02: Hapus task milik pengguna lain (forbidden),Pengguna A mencoba hapus task Pengguna B,DELETE /api/tasks/{id_task_B} dari session Pengguna A,Response 404; task tetap ada di DB,Security test
+Hapus Task,TC-DEL-03: Hapus task dengan id tidak valid,id yang diminta tidak ada di DB,DELETE /api/tasks/id-tidak-ada,Response 404 {error: "Not found"},API test
+Hapus Task,TC-DEL-04: Hapus task tanpa session mengembalikan 401,Request tanpa autentikasi,DELETE /api/tasks/{id} tanpa cookie,Response 401 {error: "Unauthorized"},API test
+Hapus Task,TC-DEL-05: Hapus task dan task hilang dari planner secara real-time,Setelah hapus; UI langsung terupdate,Hapus task dari sidebar detail; lihat planner,Task hilang dari daftar planner tanpa refresh;  task count berkurang,E2E
+,,,,,,
+=== 7. PARSE TASK – NLP AI ENGINE (10 test cases) ===,,,,,,
+Parse Task AI,TC-NLP-01: Parse task dengan deadline eksplisit,Input dengan tanggal spesifik,POST /api/tasks/parse {raw_input: "Kumpulkan laporan 30 Mei 2026 jam 10 pagi"},response.deadline berisi tanggal 2026-05-30T10:00,Pytest
+Parse Task AI,TC-NLP-02: Parse task dengan deadline relatif "besok",Input dengan kata relatif,POST /api/tasks/parse {raw_input: "Meeting tim besok jam 2 siang"},response.deadline = hari berikutnya jam 14:00,Pytest
+Parse Task AI,TC-NLP-03: Parse task tanpa deadline,Input tanpa informasi waktu,POST /api/tasks/parse {raw_input: "Baca buku Python"},response.deadline = null; title terisi; tidak error,Pytest
+Parse Task AI,TC-NLP-04: Parse mengekstraksi durasi dari input,Input dengan estimasi waktu,POST /api/tasks/parse {raw_input: "Kerjakan soal 2 jam"},response.duration_minutes = 120,Pytest
+Parse Task AI,TC-NLP-05: Parse mengenali kategori task,Input dengan konteks kategori,POST /api/tasks/parse {raw_input: "Lari pagi 5km"},response.category berisi nilai yang relevan (Health/Personal),Pytest
+Parse Task AI,TC-NLP-06: Parse task dengan input sangat panjang (>200 karakter),Stress test panjang input,POST /api/tasks/parse dengan string 300 karakter,Tidak error 500; response.success=true; data diekstraksi semaksimal mungkin,Pytest
+Parse Task AI,TC-NLP-07: Parse task dengan input bahasa Indonesia campur Inggris,Input code-switching,POST /api/tasks/parse {raw_input: "Submit assignment section 3 besok deadline jam 11 malam"},Deadline dan durasi berhasil diekstrak; tidak error,Pytest
+Parse Task AI,TC-NLP-08: Parse task dengan input hanya angka/simbol,Input tidak bermakna,POST /api/tasks/parse {raw_input: "123 !@#"},response.success berisi hasil (bisa title saja); tidak error 500,Pytest - edge case
+Parse Task AI,TC-NLP-09: Parse task kosong mengembalikan error terstruktur,Input kosong dikirim ke endpoint,POST /api/tasks/parse {raw_input: ""},Response 422 Unprocessable Entity atau {success:false; error: ...},Pytest
+Parse Task AI,TC-NLP-10: Response time parse task < 2 detik,Performance test NLP,POST /api/tasks/parse dengan input standar 10 karakter,Response diterima dalam < 2000ms,Pytest + timer
+,,,,,,
+=== 8. SCORE PRIORITAS TASK – AI PRIORITIZATION (8 test cases) ===,,,,,,
+Score Prioritas,TC-SCORE-01: Task urgent + penting mendapat skor tinggi,Deadline sangat dekat + importance tinggi,"POST /api/tasks/score {deadline: 2 jam ke depan; importance: high; duration_minutes: 60}",priority_score > 80; quadrant = "Do First",Pytest
+Score Prioritas,TC-SCORE-02: Task tidak urgent + tidak penting mendapat skor rendah,Deadline jauh + importance rendah,"POST /api/tasks/score {deadline: 30 hari ke depan; importance: low; duration_minutes: 30}",priority_score < 30; quadrant = "Eliminate",Pytest
+Score Prioritas,TC-SCORE-03: Task dengan rescheduleCount tinggi mendapat penalti skor,Task sering dijadwal ulang,"POST /api/tasks/score {deadline: besok; importance: medium; reschedule_count: 3}",priority_score lebih rendah dibanding reschedule_count=0 dengan input sama,Pytest
+Score Prioritas,TC-SCORE-04: Skor berbeda untuk durasi task berbeda (ceteris paribus),Variasi durasi saja yang berbeda,Dua request identik kecuali duration_minutes (30 vs 240),Skor berbeda; task durasi lebih panjang mendapat bobot berbeda,Pytest
+Score Prioritas,TC-SCORE-05: Score task tanpa deadline,Tidak ada deadline,POST /api/tasks/score {importance: medium; duration_minutes: 45; deadline: null},Response tidak error; skor dihitung berdasarkan importance dan duration saja,Pytest
+Score Prioritas,TC-SCORE-06: Validasi field importance wajib diisi,Request tanpa field importance,POST /api/tasks/score {duration_minutes: 60} tanpa importance,Response 422 Unprocessable Entity,Pytest
+Score Prioritas,TC-SCORE-07: Score mengembalikan quadrant Eisenhower yang valid,Output quadrant harus salah satu dari 4 nilai,Empat request dengan kombinasi urgency/importance berbeda,quadrant selalu salah satu: "Do First" / "Schedule" / "Delegate" / "Eliminate",Pytest - parametrize
+Score Prioritas,TC-SCORE-08: Score response time < 1 detik,Performance test scoring,POST /api/tasks/score dengan input valid,Response diterima dalam < 1000ms,Pytest + timer
+,,,,,,
+=== 9. DAILY BRIEFING – AI BRIEFING (4 test cases) ===,,,,,,
+Daily Briefing,TC-BRIEF-01: Briefing dihasilkan untuk pengguna dengan task aktif,Pengguna memiliki 3 task aktif hari ini,"POST /api/briefing/generate dengan tasks list berisi 3 task; user_config valid",response.success=true; briefing_text berisi teks; top_tasks tidak kosong,Pytest
+Daily Briefing,TC-BRIEF-02: Briefing dengan list task kosong,Pengguna tidak ada task sama sekali,"POST /api/briefing/generate {tasks: []; user_config: valid}",Response tidak error; briefing_text berisi pesan motivatif / kosong; top_tasks = [],Pytest
+Daily Briefing,TC-BRIEF-03: Briefing menampilkan task dengan prioritas tertinggi di atas,Top task diurutkan,5 task dengan priority berbeda dikirim,top_tasks[0] memiliki priority_score tertinggi dari semua task,Pytest
+Daily Briefing,TC-BRIEF-04: Briefing bisa diakses dari UI planner,Tombol briefing di UI berfungsi,Klik tombol Daily Briefing di halaman planner,Panel/modal briefing muncul dengan teks generated; tidak ada error network,E2E
+,,,,,,
+=== 10. SESI FOKUS – FOCUS SESSION / POMODORO (6 test cases) ===,,,,,,
+Sesi Fokus,TC-FOCUS-01: Mulai sesi fokus dan timer berjalan,Pengguna memulai sesi fokus,Klik start focus session; pilih task,Timer countdown mulai berjalan dari durasi yang ditentukan,E2E
+Sesi Fokus,TC-FOCUS-02: Timer fokus selesai mencatat actualSeconds ke task,Sesi fokus selesai,Jalankan sesi fokus selama X menit hingga habis,actualSeconds tersimpan ke task melalui PATCH /api/tasks/{id}; notifikasi selesai muncul,E2E + API
+Sesi Fokus,TC-FOCUS-03: Pengguna dapat menghentikan sesi fokus sebelum selesai,Pause / stop sesi,Klik tombol stop/pause saat timer berjalan,Timer berhenti; waktu yang sudah berjalan tersimpan atau dibuang sesuai logika,E2E
+Sesi Fokus,TC-FOCUS-04: Pencarian task di modal fokus berfungsi,Search task saat memilih untuk fokus,Ketik kata kunci di search focus; contoh: "laporan",Daftar task terfilter sesuai kata kunci yang diketik,UI test
+Sesi Fokus,TC-FOCUS-05: Focus session dots menampilkan jumlah sesi yang sesuai,Indikator sesi fokus ditampilkan,Pengguna selesaikan 3 sesi fokus,Komponen focusSessionDots menampilkan 3 titik terisi,UI test
+Sesi Fokus,TC-FOCUS-06: Fokus session tidak bisa dimulai tanpa task dipilih,Validasi pilihan task,Klik start focus tanpa memilih task manapun,Tombol start disabled atau pesan error "Pilih task terlebih dahulu",UI test
+,,,,,,
+=== 11. LIHAT PROFIL PENGGUNA (4 test cases) ===,,,,,,
+Lihat Profil,TC-PROF-01: Profil menampilkan nama dan email dari session,GET /api/profile dengan session valid,Pengguna dengan nama dan email di DB,Response 200 berisi name; email; image yang sesuai dengan akun Google,API test
+Lihat Profil,TC-PROF-02: Profil menampilkan preferensi yang tersimpan,Pengguna sudah punya UserPreferences di DB,GET /api/profile dengan UserPreferences ada,Response berisi preferences.focusTime; workStyle; workHours; focusDuration; taskType,API test
+Lihat Profil,TC-PROF-03: Profil pengguna baru tanpa preferensi mengembalikan null,Pengguna belum punya UserPreferences,GET /api/profile; UserPreferences tidak ada di DB,Response 200; preferences: null,API test
+Lihat Profil,TC-PROF-04: Akses /api/profile tanpa session mengembalikan 401,Request tanpa autentikasi,GET /api/profile tanpa cookie,Response 401 {error: "Unauthorized"},API test
+,,,,,,
+=== 12. UPDATE PROFIL / PENGATURAN (3 test cases) ===,,,,,,
+Update Profil,TC-SETTING-01: Update nama pengguna berhasil,PATCH /api/profile dengan field name,PATCH /api/profile {name: "Nama Baru"},Response 200; name terupdate di DB dan saat GET /api/profile mengembalikan nama baru,API test
+Update Profil,TC-SETTING-02: Update preferensi pengguna dari settings page,Pengguna mengubah preferensi kerja,PATCH /api/profile {preferences: {focusTime: sore; workStyle: multitasking; ...}},UserPreferences terupdate di DB; GET /api/profile mengembalikan preferensi terbaru,API + E2E
+Update Profil,TC-SETTING-03: PATCH /api/profile tanpa session mengembalikan 401,Request tidak terautentikasi,PATCH /api/profile dengan body valid; tanpa session cookie,Response 401 {error: "Unauthorized"}; data tidak berubah di DB,API test
+,,,,,,
+=== 13. PENCARIAN / FILTER TASK (2 test cases) ===,,,,,,
+Pencarian Task,TC-SEARCH-01: Pencarian task menemukan hasil yang cocok,Cari task dengan kata kunci yang ada,Ketik "laporan" di search bar planner,Hanya task dengan "laporan" di judul yang ditampilkan; task lain disembunyikan,UI test
+Pencarian Task,TC-SEARCH-02: Pencarian dengan kata kunci tidak ditemukan menampilkan empty state,Kata kunci tidak cocok dengan task manapun,Ketik "xyzabc" di search bar,Tidak ada task yang muncul; pesan "Task tidak ditemukan" ditampilkan,UI test
