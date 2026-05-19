@@ -1,11 +1,12 @@
 "use client";
 
 import { Flame } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Task, Category } from "./plannerTypes";
 import { PRIORITY_SIDEBAR_BADGE } from "./plannerStyles";
 import { STREAK_DAYS } from "./plannerMockData";
 import { api, loadAIConfig, getPeakHoursFromConfig } from "@/lib/api";
+import { formatDeadline } from "@/lib/utils";
 
 const CATEGORY_TO_BACKEND: Record<Category, string> = {
   Akademik: "academic",
@@ -44,7 +45,7 @@ function SidebarPriorityCard({ task }: { task: Task }) {
           {task.priority}
         </span>
         <span className="text-[10.5px] font-normal text-[#6b6b6b]">
-          {task.deadline}
+          {formatDeadline(task.deadline)}
         </span>
         <span className="text-[10px] font-normal text-[#6b6b6b] bg-[#e8e8e8] rounded-full px-1.75 py-[1.75px]">
           {task.duration}
@@ -65,10 +66,24 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
   const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   const [briefingText, setBriefingText] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const briefingFetched = useRef(false);
 
   useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setUserName(data?.name ?? "Kamu"))
+      .catch(() => setUserName("Kamu"));
+  }, []);
+
+  useEffect(() => {
+    if (briefingFetched.current) return;
+    if (userName === null) return; // wait for profile to load
+
     const incompleteTasks = tasks.filter((t) => !t.completed);
     if (incompleteTasks.length === 0) return;
+
+    briefingFetched.current = true;
 
     const topForBriefing = [
       ...incompleteTasks.filter((t) => t.priority === "Tinggi"),
@@ -77,7 +92,7 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
       .slice(0, 3)
       .map((t) => ({
         title: t.title,
-        deadline: t.deadline,
+        deadline: formatDeadline(t.deadline),
         category: CATEGORY_TO_BACKEND[t.category],
       }));
 
@@ -89,7 +104,7 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
 
     api
       .generateBriefing({
-        user_name: "Kamu",
+        user_name: userName,
         top_tasks: topForBriefing,
         peak_hours: peakHours,
         completion_rate: completionRate,
@@ -101,8 +116,7 @@ export function RightSidebar({ tasks }: { tasks: Task[] }) {
       .catch(() => {
         /* keep default null – show nothing */
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tasks, completedCount, totalCount, userName]);
 
   return (
     <aside className="w-77.25 shrink-0 bg-white shadow-[-4px_0px_4px_0px_rgba(93,93,90,0.1)] px-6.25 py-4.5 flex flex-col gap-5 overflow-y-auto">

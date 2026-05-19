@@ -3,6 +3,7 @@
 import { CheckCircle2, Circle, Plus, Clock } from "lucide-react";
 import { Task, Priority, FilterType, FILTERS } from "./plannerTypes";
 import { PRIORITY_META, CATEGORY_META } from "./plannerStyles";
+import { formatDeadline } from "@/lib/utils";
 
 // ─── Helper format detik → "X jam Y mnt" ─────────────────────────────────────
 function formatActualTime(seconds: number): string {
@@ -55,7 +56,7 @@ function TaskCard({
           <span
             className={`text-[10.5px] font-normal ${task.completed ? "text-[#5d5d5a]/40" : deadlineColor}`}
           >
-            {task.deadline}
+            {formatDeadline(task.deadline)}
           </span>
           <span className="text-[10.5px] font-normal text-[#6b6b6b] bg-[#f7f6fb] rounded-full px-1.75 py-[1.75px]">
             {task.duration}
