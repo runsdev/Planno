@@ -17,17 +17,22 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export interface ParseTaskResponse {
   success: boolean;
-  raw_input?: string;
+  raw_input?: string | null;
   title?: string | null;
+  type?: string | null;        // ← tambah ini
   deadline?: string | null;
+  jam_mulai?: string | null;
+  jam_selesai?: string | null;
   duration_minutes?: number | null;
   category?: string | null;
+  importance?: string | null;
   error?: string | null;
 }
 
 export interface ScoreTaskResponse {
   priority_score: number;
   quadrant: string;
+  priority_label?: string | null;  // ← tambah ini
   urgency: string;
   importance: string;
 }
@@ -75,8 +80,10 @@ export const api = {
     importance: string;
     duration_minutes?: number | null;
     reschedule_count?: number;
+    category?: string | null;
+    type?: string | null;
   }) => post<ScoreTaskResponse>("/api/tasks/score", data),
-
+  
   parseOnboarding: (prefs: {
     focusTime: string;
     workStyle: string;

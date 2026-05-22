@@ -33,30 +33,54 @@ function mapCategory(backendCat: string | null | undefined): ParsedCategory {
     personal: "Personal",
     health: "Lainnya",
   };
+
   return map[backendCat ?? ""] ?? "Lainnya";
 }
 
 function mapQuadrantToPriority(quadrant: string): ParsedPriority {
   if (quadrant === "DO_FIRST") return "Tinggi";
   if (quadrant === "SCHEDULE") return "Sedang";
+
   return "Rendah";
 }
 
 function formatDuration(mins: number | null | undefined): string {
   if (!mins) return "~1 jam";
+
   if (mins < 60) return `~${mins} mnt`;
+
   const h = Math.floor(mins / 60);
   const m = mins % 60;
+
   return m > 0 ? `~${h} jam ${m} mnt` : `~${h} jam`;
+}
+
+// ─── Priority Rules ───────────────────────────────────────────────────────────
+
+function isToday(dateString: string | null | undefined): boolean {
+  if (!dateString) return false;
+
+  const date = new Date(dateString);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
 }
 
 // ─── Real AI parser ───────────────────────────────────────────────────────────
 
 async function parseWithAI(input: string): Promise<ParsedResult> {
   const parsed = await api.parseTask(input);
-  if (!parsed.success) throw new Error(parsed.error ?? "Gagal memproses input");
+
+  if (!parsed.success) {
+    throw new Error(parsed.error ?? "Gagal memproses input");
+  }
 
   const category = mapCategory(parsed.category);
+
   const importanceMap: Record<ParsedCategory, string> = {
     Akademik: "high",
     Kerja: "high",
@@ -69,33 +93,54 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
     importance: importanceMap[category],
     duration_minutes: parsed.duration_minutes,
     reschedule_count: 0,
+    category: parsed.category,
+    type: parsed.type,
   });
 
   return {
-    type: "Tugas",
+    type:
+      parsed.type === "Tugas" || parsed.type === "Acara"
+        ? parsed.type
+        : "Tugas",
+
     title: parsed.title ?? input,
+
     deadline: formatDeadline(parsed.deadline),
+
     deadlineISO: parsed.deadline ?? null,
+
     duration: formatDuration(parsed.duration_minutes),
+
     category,
-    priority: mapQuadrantToPriority(scored.quadrant),
+
+    priority: isToday(parsed.deadline)
+      ? "Tinggi"
+      : ((scored.priority_label as ParsedPriority) ??
+          mapQuadrantToPriority(scored.quadrant)),
   };
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
+
 interface AddTaskModalProps {
   open: boolean;
   onClose: () => void;
+
   // TODO: wire this up to actual task/event store
   onSave: (result: ParsedResult) => void;
 }
 
-export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
+export function AddTaskModal({
+  open,
+  onClose,
+  onSave,
+}: AddTaskModalProps) {
   const [step, setStep] = useState<Step>("input");
   const [input, setInput] = useState("");
   const [parsed, setParsed] = useState<ParsedResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // Reset state setiap modal dibuka
@@ -112,10 +157,13 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
   // Close on Escape
   useEffect(() => {
     if (!open) return;
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+
     document.addEventListener("keydown", handler);
+
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
@@ -123,15 +171,20 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
 
   const handleParse = async () => {
     if (!input.trim() || isParsing) return;
+
     setIsParsing(true);
     setParseError(null);
+
     try {
       const result = await parseWithAI(input);
+
       setParsed(result);
       setStep("preview");
     } catch (err) {
       setParseError(
-        err instanceof Error ? err.message : "Gagal memproses. Coba lagi.",
+        err instanceof Error
+          ? err.message
+          : "Gagal memproses. Coba lagi.",
       );
     } finally {
       setIsParsing(false);
@@ -140,12 +193,14 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
 
   const handleSave = () => {
     if (!parsed) return;
+
     onSave(parsed);
     onClose();
   };
 
   const handleEdit = (field: keyof ParsedResult, value: string) => {
     if (!parsed) return;
+
     setParsed({ ...parsed, [field]: value });
   };
 
@@ -168,6 +223,7 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
           <h2 className="text-[18px] font-semibold text-[#212121]">
             Tambah Dengan AI
           </h2>
+
           <button
             type="button"
             onClick={onClose}
@@ -190,7 +246,10 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
 
           {/* Preview shown after parse */}
           {step === "preview" && parsed && (
-            <TaskPreviewStep result={parsed} onEdit={handleEdit} />
+            <TaskPreviewStep
+              result={parsed}
+              onEdit={handleEdit}
+            />
           )}
 
           {/* Error message */}
@@ -203,8 +262,8 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
           {/* Helper text */}
           {!parseError && (
             <p className="text-[12.25px] font-normal text-[#6b6b6b]">
-              AI akan mendeteksi apakah ini tugas atau acara, lalu mengisi
-              detailnya otomatis.
+              AI akan mendeteksi apakah ini tugas atau acara, lalu
+              mengisi detailnya otomatis.
             </p>
           )}
 
@@ -217,6 +276,7 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
             >
               Batal
             </button>
+
             <button
               type="button"
               onClick={step === "input" ? handleParse : handleSave}

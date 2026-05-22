@@ -84,7 +84,11 @@ class PriorityScorer:
         urgency_label    = self._label_urgency(urgency_score)
         importance_label = task_data.get("importance", "medium")
         quadrant         = self._klasifikasi_kuadran(urgency_score, importance_score)
-        priority_label   = self._label_priority(priority_score)
+        priority_label   = self._label_priority(
+            priority_score,
+            task_data.get("category", ""),
+            task_data.get("deadline")
+        )
 
         return {
             "priority_score" : priority_score,
@@ -125,14 +129,16 @@ class PriorityScorer:
                     base_urgency = 95
                 elif hari_lagi == 1:
                     base_urgency = 85
-                elif hari_lagi <= 3:
+                elif hari_lagi == 2:
                     base_urgency = 70
+                elif hari_lagi <= 3:
+                    base_urgency = 60
                 elif hari_lagi <= 7:
-                    base_urgency = 50
+                    base_urgency = 45
                 elif hari_lagi <= 14:
-                    base_urgency = 35
+                    base_urgency = 25
                 else:
-                    base_urgency = 20
+                    base_urgency = 15
 
             except ValueError:
                 base_urgency = 30
@@ -141,22 +147,73 @@ class PriorityScorer:
         return min(base_urgency + bonus_reschedule, 100)
 
     def _label_urgency(self, urgency_score: float) -> str:
-        if urgency_score >= 70: return "high"
-        elif urgency_score >= 40: return "medium"
-        else: return "low"
+        if urgency_score >= 70:
+            return "high"
+        elif urgency_score >= 40:
+            return "medium"
+        else:
+            return "low"
 
-    def _label_priority(self, score: int) -> str:
-        """Konversi priority_score ke label Tinggi/Sedang/Rendah."""
-        if score >= 70: return "Tinggi"
-        elif score >= 40: return "Sedang"
-        else: return "Rendah"
+    def _label_priority(self, score: int, category: str, deadline: str) -> str:
+        is_personal = category in ("personal", "Personal")
+        is_lainnya  = category in ("health", "Lainnya")
+
+        hari_lagi = 999
+
+        if deadline:
+            try:
+                fmt = "%Y-%m-%d" if len(deadline) == 10 else "%Y-%m-%d %H:%M"
+                dt = datetime.strptime(deadline, fmt)
+
+                hari_lagi = (dt - datetime.now()).days
+
+            except:
+                pass
+
+        # ─── PERSONAL & LAINNYA ─────────────────────────────
+        if is_personal or is_lainnya:
+
+            # Hari ini
+            if hari_lagi == 0:
+                return "Tinggi"
+
+            # Besok & Lusa
+            elif hari_lagi <= 3:
+                return "Sedang"
+
+            # > 2 hari
+            else:
+                return "Rendah"
+
+        # ─── AKADEMIK & KERJA ───────────────────────────────
+        else:
+
+            # Hari ini & Besok
+            if hari_lagi <= 1:
+                return "Tinggi"
+
+            # Hari ke-3 sampai ke-7
+            elif hari_lagi <= 7:
+                return "Sedang"
+
+            # > 7 hari
+            else:
+                return "Rendah"
 
     def _klasifikasi_kuadran(self, urgency: float, importance: float) -> str:
         """Klasifikasi ke 4 kuadran Eisenhower."""
-        urgent    = urgency >= 70
+
+        urgent = urgency >= 70
         important = importance >= 70
 
-        if urgent and important:     return "DO_FIRST"
-        elif not urgent and important: return "SCHEDULE"
-        elif urgent and not important: return "DELEGATE"
-        else:                          return "ELIMINATE"
+        if urgent and important:
+            return "DO_FIRST"
+
+        elif not urgent and important:
+            return "SCHEDULE"
+
+        elif urgent and not important:
+            return "DELEGATE"
+
+        else:
+            return "ELIMINATE"
