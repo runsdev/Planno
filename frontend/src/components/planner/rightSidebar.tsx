@@ -56,10 +56,25 @@ function SidebarPriorityCard({ task }: { task: Task }) {
 }
 
 export function RightSidebar({ tasks }: { tasks: Task[] }) {
-  const topTasks = [
-    ...tasks.filter((t) => t.priority === "Tinggi"),
-    ...tasks.filter((t) => t.priority === "Sedang"),
-  ].slice(0, 3);
+
+  const now = new Date();
+
+const topTasks = [
+  ...tasks.filter(
+    (t) =>
+      (t.priority === "Tinggi" || t.priority === "Sedang") &&
+      !t.completed &&
+      t.deadline &&
+      !t.deadline.includes("Terlambat"),
+  ),
+]
+  .sort((a, b) => {
+    const dateA = new Date(a.deadline ?? "").getTime();
+    const dateB = new Date(b.deadline ?? "").getTime();
+
+    return dateA - dateB;
+  })
+  .slice(0, 3);
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const totalCount = tasks.length;

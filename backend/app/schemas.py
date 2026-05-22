@@ -12,9 +12,13 @@ class TaskParseResponse(BaseModel):
     success: bool
     raw_input: Optional[str] = None
     title: Optional[str] = None
+    type: Optional[str] = None
     deadline: Optional[str] = None
+    jam_mulai: Optional[str] = None
+    jam_selesai: Optional[str] = None
     duration_minutes: Optional[int] = None
     category: Optional[str] = None
+    importance: Optional[str] = None
     error: Optional[str] = None
 
 
