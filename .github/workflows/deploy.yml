@@ -1,0 +1,119 @@
+name: Build, Push & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write        # push to GHCR
+  id-token: write        # OIDC token for Azure login
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/runsdev/planno-backend
+  FRONTEND_IMAGE: ghcr.io/runsdev/planno-frontend
+  RESOURCE_GROUP: planno-rg
+  BACKEND_APP: planno-backend
+  FRONTEND_APP: planno-frontend
+  ACA_ENV: planno-env
+  LOCATION: eastasia
+  BACKEND_URL: https://planno-backend.ambitiousriver-1531c5c1.eastasia.azurecontainerapps.io
+
+jobs:
+  build-push-backend:
+    name: Build & Push Backend
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+  build-push-frontend:
+    name: Build & Push Frontend
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ env.BACKEND_URL }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+  deploy:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: [build-push-backend, build-push-frontend]
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install containerapp extension
+        run: az extension add --name containerapp --allow-preview true -y
+
+      - name: Update backend
+        run: |
+          az containerapp update \
+            --name ${{ env.BACKEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --only-show-errors
+
+      - name: Update frontend
+        run: |
+          az containerapp update \
+            --name ${{ env.FRONTEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            --only-show-errors
+
+      - name: Verify deployments
+        run: |
+          echo "=== Backend ===" 
+          az containerapp show \
+            --name ${{ env.BACKEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "{status:properties.runningStatus, image:properties.template.containers[0].image}" \
+            -o table
+          echo "=== Frontend ==="
+          az containerapp show \
+            --name ${{ env.FRONTEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "{status:properties.runningStatus, image:properties.template.containers[0].image}" \
+            -o table
