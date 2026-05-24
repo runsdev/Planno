@@ -15,8 +15,14 @@ class TaskParser:
     """
 
     def __init__(self):
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model  = "llama-3.1-8b-instant"
+        custom_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        }
+        self.client = Groq(
+            api_key=os.getenv("GROQ_API_KEY"),
+            default_headers=custom_headers
+        )
+        self.model = "llama-3.1-8b-instant"
 
     def _hitung_tanggal_relatif(self, today: datetime) -> dict:
         besok     = today + timedelta(days=1)
