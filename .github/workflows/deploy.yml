@@ -18,7 +18,7 @@ env:
   FRONTEND_APP: planno-frontend
   ACA_ENV: planno-env
   LOCATION: eastasia
-  BACKEND_URL: https://planno-backend.ambitiousriver-1531c5c1.eastasia.azurecontainerapps.io
+  BACKEND_URL: https://api.planno.runsha.dev
 
 jobs:
   build-push-backend:
@@ -92,6 +92,7 @@ jobs:
             --name ${{ env.BACKEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --set-env-vars "FRONTEND_URL=https://planno.runsha.dev" \
             --only-show-errors
 
       - name: Update frontend
@@ -100,6 +101,7 @@ jobs:
             --name ${{ env.FRONTEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            --set-env-vars "NEXTAUTH_URL=https://planno.runsha.dev" \
             --only-show-errors
 
       - name: Verify deployments
