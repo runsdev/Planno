@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  packages: write        # push to GHCR
   id-token: write        # OIDC token for Azure login
 
 env:
@@ -34,11 +33,11 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: runsdev
+          password: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Build and push backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
@@ -58,11 +57,11 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: runsdev
+          password: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Build and push frontend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
