@@ -15,3 +15,7 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 API docs: http://localhost:8000/docs
+
+## Environment
+
+Set `GROQ_API_KEY` in your local `.env` or Container App environment before using the AI-powered task parser and daily briefing endpoints.

@@ -87,12 +87,15 @@ jobs:
         run: az extension add --name containerapp --allow-preview true -y
 
       - name: Update backend
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
+          test -n "$GROQ_API_KEY"
           az containerapp update \
             --name ${{ env.BACKEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
-            --set-env-vars "FRONTEND_URL=https://planno.runsha.dev" \
+            --set-env-vars "FRONTEND_URL=https://planno.runsha.dev" "GROQ_API_KEY=$GROQ_API_KEY" \
             --only-show-errors
 
       - name: Update frontend
