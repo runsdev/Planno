@@ -19,7 +19,7 @@ export interface ParseTaskResponse {
   success: boolean;
   raw_input?: string | null;
   title?: string | null;
-  type?: string | null;        // ← tambah ini
+  type?: string | null; // ← tambah ini
   deadline?: string | null;
   jam_mulai?: string | null;
   jam_selesai?: string | null;
@@ -32,7 +32,7 @@ export interface ParseTaskResponse {
 export interface ScoreTaskResponse {
   priority_score: number;
   quadrant: string;
-  priority_label?: string | null;  // ← tambah ini
+  priority_label?: string | null; // ← tambah ini
   urgency: string;
   importance: string;
 }
@@ -72,8 +72,11 @@ export interface BriefingResponse {
 // ── API object ────────────────────────────────────────────────────────────────
 
 export const api = {
-  parseTask: (rawInput: string) =>
-    post<ParseTaskResponse>("/api/tasks/parse", { raw_input: rawInput }),
+  parseTask: (rawInput: string, clientNow?: string) =>
+    post<ParseTaskResponse>("/api/tasks/parse", {
+      raw_input: rawInput,
+      client_now: clientNow,
+    }),
 
   scoreTask: (data: {
     deadline?: string | null;
@@ -82,8 +85,9 @@ export const api = {
     reschedule_count?: number;
     category?: string | null;
     type?: string | null;
+    client_now?: string;
   }) => post<ScoreTaskResponse>("/api/tasks/score", data),
-  
+
   parseOnboarding: (prefs: {
     focusTime: string;
     workStyle: string;

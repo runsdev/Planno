@@ -71,9 +71,16 @@ class PriorityScorer:
                 importance (str)     : high/medium/low
             }
         """
+        client_now = task_data.get("client_now")
+        try:
+            now = datetime.strptime(client_now, "%Y-%m-%d %H:%M") if client_now else datetime.now()
+        except (ValueError, TypeError):
+            now = datetime.now()
+
         urgency_score    = self._hitung_urgency(
             task_data.get("deadline"),
-            task_data.get("reschedule_count", 0) or 0
+            task_data.get("reschedule_count", 0) or 0,
+            now,
         )
         importance_score = self._hitung_importance(task_data)
         type_bonus       = self.TYPE_BONUS.get(task_data.get("type", "Tugas"), 0)
@@ -87,7 +94,8 @@ class PriorityScorer:
         priority_label   = self._label_priority(
             priority_score,
             task_data.get("category", ""),
-            task_data.get("deadline")
+            task_data.get("deadline"),
+            now,
         )
 
         return {
@@ -110,8 +118,10 @@ class PriorityScorer:
         importance = task_data.get("importance", "medium")
         return self.IMPORTANCE_MAP.get(importance, 60)
 
-    def _hitung_urgency(self, deadline: str, reschedule_count: int) -> float:
+    def _hitung_urgency(self, deadline: str, reschedule_count: int, now: datetime | None = None) -> float:
         """Hitung urgency score 0-100 berdasarkan jarak deadline."""
+        if now is None:
+            now = datetime.now()
         if deadline is None:
             base_urgency = 30
         else:
@@ -121,7 +131,7 @@ class PriorityScorer:
                 else:
                     deadline_dt = datetime.strptime(deadline, "%Y-%m-%d %H:%M")
 
-                hari_lagi = (deadline_dt - datetime.now()).days
+                hari_lagi = (deadline_dt - now).days
 
                 if hari_lagi < 0:
                     base_urgency = 100
@@ -154,7 +164,9 @@ class PriorityScorer:
         else:
             return "low"
 
-    def _label_priority(self, score: int, category: str, deadline: str) -> str:
+    def _label_priority(self, score: int, category: str, deadline: str, now: datetime | None = None) -> str:
+        if now is None:
+            now = datetime.now()
         is_personal = category in ("personal", "Personal")
         is_lainnya  = category in ("health", "Lainnya")
 
@@ -165,7 +177,7 @@ class PriorityScorer:
                 fmt = "%Y-%m-%d" if len(deadline) == 10 else "%Y-%m-%d %H:%M"
                 dt = datetime.strptime(deadline, fmt)
 
-                hari_lagi = (dt - datetime.now()).days
+                hari_lagi = (dt - now).days
 
             except:
                 pass

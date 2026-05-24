@@ -72,8 +72,14 @@ function isToday(dateString: string | null | undefined): boolean {
 
 // ─── Real AI parser ───────────────────────────────────────────────────────────
 
+function getClientNow(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 async function parseWithAI(input: string): Promise<ParsedResult> {
-  const parsed = await api.parseTask(input);
+  const parsed = await api.parseTask(input, getClientNow());
 
   if (!parsed.success) {
     throw new Error(parsed.error ?? "Gagal memproses input");
@@ -95,6 +101,7 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
     reschedule_count: 0,
     category: parsed.category,
     type: parsed.type,
+    client_now: getClientNow(),
   });
 
   return {
@@ -116,7 +123,7 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
     priority: isToday(parsed.deadline)
       ? "Tinggi"
       : ((scored.priority_label as ParsedPriority) ??
-          mapQuadrantToPriority(scored.quadrant)),
+        mapQuadrantToPriority(scored.quadrant)),
   };
 }
 
@@ -130,11 +137,7 @@ interface AddTaskModalProps {
   onSave: (result: ParsedResult) => void;
 }
 
-export function AddTaskModal({
-  open,
-  onClose,
-  onSave,
-}: AddTaskModalProps) {
+export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
   const [step, setStep] = useState<Step>("input");
   const [input, setInput] = useState("");
   const [parsed, setParsed] = useState<ParsedResult | null>(null);
@@ -182,9 +185,7 @@ export function AddTaskModal({
       setStep("preview");
     } catch (err) {
       setParseError(
-        err instanceof Error
-          ? err.message
-          : "Gagal memproses. Coba lagi.",
+        err instanceof Error ? err.message : "Gagal memproses. Coba lagi.",
       );
     } finally {
       setIsParsing(false);
@@ -246,10 +247,7 @@ export function AddTaskModal({
 
           {/* Preview shown after parse */}
           {step === "preview" && parsed && (
-            <TaskPreviewStep
-              result={parsed}
-              onEdit={handleEdit}
-            />
+            <TaskPreviewStep result={parsed} onEdit={handleEdit} />
           )}
 
           {/* Error message */}
@@ -262,8 +260,8 @@ export function AddTaskModal({
           {/* Helper text */}
           {!parseError && (
             <p className="text-[12.25px] font-normal text-[#6b6b6b]">
-              AI akan mendeteksi apakah ini tugas atau acara, lalu
-              mengisi detailnya otomatis.
+              AI akan mendeteksi apakah ini tugas atau acara, lalu mengisi
+              detailnya otomatis.
             </p>
           )}
 

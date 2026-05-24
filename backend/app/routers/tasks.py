@@ -19,7 +19,7 @@ async def parse_task(body: TaskParseRequest):
     """
     Parse a natural-language task description into structured task data.
     """
-    result = _parser.parse(body.raw_input)
+    result = _parser.parse(body.raw_input, client_now=body.client_now)
     return result
 
 
@@ -28,5 +28,6 @@ async def score_task(body: TaskScoreRequest):
     """
     Calculate the priority score and Eisenhower quadrant for a task.
     """
-    result = _scorer.score_task(body.model_dump())
+    data = body.model_dump()
+    result = _scorer.score_task(data)
     return result

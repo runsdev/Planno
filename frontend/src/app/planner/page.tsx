@@ -21,10 +21,16 @@ type TaskProgress = Record<
 >;
 
 function parsedToTask(result: ParsedResult): Omit<Task, "id"> {
+  // result.deadlineISO is a naive local-time string like "2026-05-25 14:00".
+  // new Date("2026-05-25T14:00") in the browser interprets it as local time,
+  // so .toISOString() produces the correct UTC representation for DB storage.
+  const deadlineUTC = result.deadlineISO
+    ? new Date(result.deadlineISO.replace(" ", "T")).toISOString()
+    : null;
   return {
     title: result.title,
-    deadline: result.deadlineISO,
-    deadlineColor: getDeadlineColor(result.deadlineISO),
+    deadline: deadlineUTC,
+    deadlineColor: getDeadlineColor(deadlineUTC),
     duration: result.duration,
     category: result.category,
     priority: result.priority,

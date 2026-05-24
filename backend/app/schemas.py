@@ -6,6 +6,7 @@ from typing import Optional
 
 class TaskParseRequest(BaseModel):
     raw_input: str = Field(..., min_length=1, description="Natural-language task input")
+    client_now: Optional[str] = Field(None, description="User's local datetime YYYY-MM-DD HH:MM")
 
 
 class TaskParseResponse(BaseModel):
@@ -29,6 +30,7 @@ class TaskScoreRequest(BaseModel):
     importance: str = Field("medium", pattern="^(high|medium|low)$")
     duration_minutes: Optional[int] = None
     reschedule_count: int = Field(0, ge=0)
+    client_now: Optional[str] = Field(None, description="User's local datetime YYYY-MM-DD HH:MM")
 
 
 class TaskScoreResponse(BaseModel):

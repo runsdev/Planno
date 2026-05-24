@@ -171,11 +171,17 @@ class TaskParser:
             return "Acara"  # Acara menang jika keduanya terdeteksi
         return None
 
-    def parse(self, raw_input: str) -> dict:
+    def parse(self, raw_input: str, client_now: str | None = None) -> dict:
         if not raw_input or len(raw_input.strip()) == 0:
             return {"success": False, "error": "Input tidak boleh kosong"}
 
-        today     = datetime.now()
+        if client_now:
+            try:
+                today = datetime.strptime(client_now, "%Y-%m-%d %H:%M")
+            except ValueError:
+                today = datetime.now()
+        else:
+            today = datetime.now()
         today_str = today.strftime("%Y-%m-%d")
         day_name  = ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"][today.weekday()]
         tanggal   = self._hitung_tanggal_relatif(today)
@@ -194,15 +200,15 @@ class TaskParser:
 Kembalikan HANYA JSON valid. Tidak ada teks lain. Tidak ada markdown. Tidak ada penjelasan.
 
 === ATURAN TITLE ===
-Ambil judul PERSIS dari inti kalimat input. Jangan ubah, jangan terjemahkan, jangan ringkas.
+Ambil judul PERSIS dari inti kalimat input. Jangan ubah, jangan terjemahkan, jangan ringkas, gunakan TitleCase.
 Hapus hanya informasi waktu (jam, tanggal) dari title.
 Contoh:
-- "kerjakan laporan capstone besok jam 10" → "kerjakan laporan capstone"
-- "main sama teman ke pakuwon besok jam 13" → "main sama teman ke pakuwon"
-- "belajar untuk ujian statistik lusa jam 8" → "belajar untuk ujian statistik"
-- "menonton seminar hari ini jam 15" → "menonton seminar"
-- "beli kopi di warung pagi ini" → "beli kopi di warung"
-- "submit laporan PKL besok" → "submit laporan PKL"
+- "kerjakan laporan capstone besok jam 10" → "Kerjakan Laporan Capstone"
+- "main sama teman ke pakuwon besok jam 13" → "Main Sama Teman Ke Pakuwon"
+- "belajar untuk ujian statistik lusa jam 8" → "Belajar untuk Ujian Statistik"
+- "menonton seminar hari ini jam 15" → "Menonton Seminar"
+- "beli kopi di warung pagi ini" → "Beli Kopi di Warung"
+- "submit laporan PKL besok" → "Submit Laporan PKL"
 
 === ATURAN TYPE ===
 "Acara" = aktivitas yang DIHADIRI/DILAKUKAN/DIALAMI pada waktu tertentu (ada di tempat/lokasi):
