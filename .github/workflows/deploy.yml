@@ -101,7 +101,7 @@ jobs:
             --name ${{ env.FRONTEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
-            --set-env-vars "NEXTAUTH_URL=https://planno.runsha.dev" \
+            --set-env-vars "NEXTAUTH_URL=https://planno.runsha.dev" "AUTH_URL=https://planno.runsha.dev" \
             --only-show-errors
 
       - name: Verify deployments
