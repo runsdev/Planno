@@ -1,12 +1,22 @@
 "use client";
 
 import { Flame } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Task, Category } from "./plannerTypes";
 import { PRIORITY_SIDEBAR_BADGE } from "./plannerStyles";
-import { STREAK_DAYS } from "./plannerMockData";
 import { api, loadAIConfig, getPeakHoursFromConfig } from "@/lib/api";
 import { formatDeadline } from "@/lib/utils";
+
+// Indonesian single-letter day labels indexed by getDay() (0=Sun…6=Sat)
+const DAY_LABELS = ["M", "S", "S", "R", "K", "J", "S"];
+
+function localDateStr(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
 
 const CATEGORY_TO_BACKEND: Record<Category, string> = {
   Akademik: "academic",
@@ -56,25 +66,24 @@ function SidebarPriorityCard({ task }: { task: Task }) {
 }
 
 export function RightSidebar({ tasks }: { tasks: Task[] }) {
-
   const now = new Date();
 
-const topTasks = [
-  ...tasks.filter(
-    (t) =>
-      (t.priority === "Tinggi" || t.priority === "Sedang") &&
-      !t.completed &&
-      t.deadline &&
-      !t.deadline.includes("Terlambat"),
-  ),
-]
-  .sort((a, b) => {
-    const dateA = new Date(a.deadline ?? "").getTime();
-    const dateB = new Date(b.deadline ?? "").getTime();
+  const topTasks = [
+    ...tasks.filter(
+      (t) =>
+        (t.priority === "Tinggi" || t.priority === "Sedang") &&
+        !t.completed &&
+        t.deadline &&
+        !t.deadline.includes("Terlambat"),
+    ),
+  ]
+    .sort((a, b) => {
+      const dateA = new Date(a.deadline ?? "").getTime();
+      const dateB = new Date(b.deadline ?? "").getTime();
 
-    return dateA - dateB;
-  })
-  .slice(0, 3);
+      return dateA - dateB;
+    })
+    .slice(0, 3);
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const totalCount = tasks.length;
@@ -91,14 +100,29 @@ const topTasks = [
       .catch(() => setUserName("Kamu"));
   }, []);
 
+  // ── Briefing (cached per calendar day) ──────────────────────────────────
   useEffect(() => {
     if (briefingFetched.current) return;
-    if (userName === null) return; // wait for profile to load
+    if (userName === null) return;
 
     const incompleteTasks = tasks.filter((t) => !t.completed);
     if (incompleteTasks.length === 0) return;
 
     briefingFetched.current = true;
+
+    // Check localStorage cache keyed to today's date
+    const today = localDateStr(new Date());
+    const cacheKey = `planno_briefing_${today}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setBriefingText(cached);
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
 
     const topForBriefing = [
       ...incompleteTasks.filter((t) => t.priority === "Tinggi"),
@@ -125,13 +149,58 @@ const topTasks = [
         completion_rate: completionRate,
       })
       .then((res) => {
-        if (res.success && res.briefing_text)
+        if (res.success && res.briefing_text) {
           setBriefingText(res.briefing_text);
+          try {
+            localStorage.setItem(cacheKey, res.briefing_text);
+          } catch {
+            /* ignore – quota exceeded */
+          }
+        }
       })
       .catch(() => {
-        /* keep default null – show nothing */
+        /* keep null */
       });
   }, [tasks, completedCount, totalCount, userName]);
+
+  // ── Streak computation (last 7 days) ─────────────────────────────────────
+  const completedDateSet = useMemo(() => {
+    const set = new Set<string>();
+    tasks.forEach((t) => {
+      if (t.completed && t.completedAt) {
+        // Convert UTC completedAt to local date string
+        set.add(localDateStr(new Date(t.completedAt)));
+      }
+    });
+    return set;
+  }, [tasks]);
+
+  const streakDays = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (6 - i));
+      return {
+        label: DAY_LABELS[d.getDay()],
+        active: completedDateSet.has(localDateStr(d)),
+        current: i === 6,
+      };
+    });
+  }, [completedDateSet]);
+
+  const streakCount = useMemo(() => {
+    let count = 0;
+    const d = new Date();
+    // If today has no completions yet, start counting from yesterday
+    if (!completedDateSet.has(localDateStr(d))) {
+      d.setDate(d.getDate() - 1);
+    }
+    while (completedDateSet.has(localDateStr(d))) {
+      count++;
+      d.setDate(d.getDate() - 1);
+    }
+    return count;
+  }, [completedDateSet]);
 
   return (
     <aside className="w-77.25 shrink-0 bg-white shadow-[-4px_0px_4px_0px_rgba(93,93,90,0.1)] px-6.25 py-4.5 flex flex-col gap-5 overflow-y-auto">
@@ -189,7 +258,7 @@ const topTasks = [
           Streak
         </h3>
         <div className="flex items-center justify-between">
-          {STREAK_DAYS.map((day, i) => (
+          {streakDays.map((day, i) => (
             <div
               key={i}
               className={`w-5.25 h-5.25 rounded-full flex items-center justify-center text-[10px] font-semibold text-[#5d5d5a]
@@ -202,7 +271,9 @@ const topTasks = [
         <div className="flex items-center gap-1.75">
           <Flame className="w-3.5 h-3.5 text-[#e07b72]" />
           <span className="text-[10.5px] font-medium text-[#5d5d5a]">
-            3 hari berturut-turut
+            {streakCount > 0
+              ? `${streakCount} hari berturut-turut`
+              : "Belum ada streak hari ini"}
           </span>
         </div>
       </div>

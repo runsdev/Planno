@@ -24,6 +24,8 @@ export async function PATCH(
     where: { id },
     data: {
       ...(body.completed !== undefined && { completed: body.completed }),
+      ...(body.completed === true && { completedAt: new Date() }),
+      ...(body.completed === false && { completedAt: null }),
       ...(body.actualSeconds !== undefined && {
         actualSeconds: body.actualSeconds,
       }),

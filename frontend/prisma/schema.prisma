@@ -72,6 +72,7 @@ model Task {
   category        String
   priority        String
   completed       Boolean   @default(false)
+  completedAt     DateTime?
   actualSeconds   Int?
   rescheduleCount Int       @default(0)
   createdAt       DateTime  @default(now())

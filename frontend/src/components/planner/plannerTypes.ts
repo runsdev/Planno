@@ -18,6 +18,7 @@ export interface Task {
   category: Category;
   priority: Priority;
   completed: boolean;
+  completedAt?: string | null;
   // Waktu aktual dari focus session (detik), diisi saat Tandai Selesai
   actualSeconds?: number;
 }
