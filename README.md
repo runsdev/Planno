@@ -32,6 +32,9 @@ label prioritas berdasarkan deadline dan kategori aktivitas. Membangun
 menggunakan Generative AI. Menulis 40+ unit test 
 menggunakan pytest dan melakukan evaluasi akurasi seluruh modul AI.
 
+<img width="547" height="280" alt="des" src="https://github.com/user-attachments/assets/d2eb1d04-372d-47e2-9360-decca955f5e0" />
+
+
 ### Harun — Cloud Engineer
 Bertanggung jawab atas pengembangan backend dan infrastruktur cloud aplikasi 
 Planno. Membangun RESTful API menggunakan FastAPI dengan 5 endpoint utama 
@@ -42,6 +45,9 @@ frontend dan backend ke platform Vercel dengan konfigurasi environment
 variables dan integrasi CI/CD melalui GitHub sehingga setiap push ke branch 
 main otomatis memicu proses build dan deployment.
 
+<img width="551" height="267" alt="run" src="https://github.com/user-attachments/assets/2508f995-ffec-432d-a29d-6e4e666785e1" />
+
+
 ### Maritza — UI/UX Engineer
 Bertanggung jawab atas seluruh pengembangan antarmuka pengguna aplikasi 
 Planno. Merancang dan mengimplementasikan tampilan menggunakan Next.js 16 
@@ -51,3 +57,7 @@ preferensi pengguna, halaman planner dengan kanban board untuk visualisasi
 task berdasarkan prioritas, right sidebar untuk menampilkan daily briefing 
 dan top 3 prioritas, serta focus mode dengan timer Pomodoro untuk sesi 
 kerja terstruktur.
+
+<img width="555" height="270" alt="cha" src="https://github.com/user-attachments/assets/8841613f-7f85-471f-b282-5197aebedf6a" />
+
+
