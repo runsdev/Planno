@@ -32,6 +32,7 @@ label prioritas berdasarkan deadline dan kategori aktivitas. Membangun
 menggunakan Generative AI. Menulis 40+ unit test 
 menggunakan pytest dan melakukan evaluasi akurasi seluruh modul AI.
 
+## Bukti Kontribusi
 <img width="547" height="280" alt="des" src="https://github.com/user-attachments/assets/d2eb1d04-372d-47e2-9360-decca955f5e0" />
 
 
