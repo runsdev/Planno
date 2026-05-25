@@ -46,6 +46,7 @@ frontend dan backend ke platform Vercel dengan konfigurasi environment
 variables dan integrasi CI/CD melalui GitHub sehingga setiap push ke branch 
 main otomatis memicu proses build dan deployment.
 
+## Bukti Kontribusi
 <img width="551" height="267" alt="run" src="https://github.com/user-attachments/assets/2508f995-ffec-432d-a29d-6e4e666785e1" />
 
 
@@ -59,6 +60,7 @@ task berdasarkan prioritas, right sidebar untuk menampilkan daily briefing
 dan top 3 prioritas, serta focus mode dengan timer Pomodoro untuk sesi 
 kerja terstruktur.
 
+## Bukti Kontribusi
 <img width="555" height="270" alt="cha" src="https://github.com/user-attachments/assets/8841613f-7f85-471f-b282-5197aebedf6a" />
 
 
