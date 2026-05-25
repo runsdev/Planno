@@ -66,8 +66,6 @@ function SidebarPriorityCard({ task }: { task: Task }) {
 }
 
 export function RightSidebar({ tasks }: { tasks: Task[] }) {
-  const now = new Date();
-
   const topTasks = [
     ...tasks.filter(
       (t) =>

@@ -71,7 +71,10 @@ export default function OnboardingPage() {
     useState<Preferences>(defaultPreferences);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (
+    field: string,
+    value: string | { start: string; end: string },
+  ) => {
     setPreferences((prev) => ({ ...prev, [field]: value }));
   };
 

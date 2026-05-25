@@ -13,7 +13,10 @@ type Preferences = {
 
 type SettingsFormProps = {
   preferences: Preferences;
-  onChange: (field: string, value: any) => void;
+  onChange: (
+    field: string,
+    value: string | { start: string; end: string },
+  ) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
 };

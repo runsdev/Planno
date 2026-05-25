@@ -1,36 +1,64 @@
 "use client";
 
-import { ParsedResult, ParsedCategory, ParsedPriority, ParsedType } from "./addTaskModal";
+import {
+  ParsedResult,
+  ParsedCategory,
+  ParsedPriority,
+  ParsedType,
+} from "./addTaskModal";
 import { TaskPreviewField, PreviewTextInput } from "./taskPreviewField";
 
 // ─── Style maps — same tokens as kanban cards ─────────────────────────────────
 const TYPE_STYLE: Record<ParsedType, { bg: string; text: string }> = {
   // Green for Tugas, purple for Acara (berbeda dari kategori kanban)
   Tugas: { bg: "bg-[rgba(205,235,241,0.6)]", text: "text-[#4a6fa5]" },
-  Acara: { bg: "bg-[#cbceea]",               text: "text-[#5d65b2]" },
+  Acara: { bg: "bg-[#cbceea]", text: "text-[#5d65b2]" },
 };
 
 // Matching kanban CATEGORY_META exactly
 const CATEGORY_STYLE: Record<ParsedCategory, { bg: string; text: string }> = {
-  Akademik: { bg: "bg-[#f8e5e5]",             text: "text-[#e07b72]" },
-  Kerja:    { bg: "bg-[#def1d0]",             text: "text-[#3d6b35]" },
-  Personal: { bg: "bg-[#cbceea]",             text: "text-[#5d65b2]" },
-  Lainnya:  { bg: "bg-[rgba(93,93,90,0.15)]", text: "text-[#5d5d5a]" },
+  Akademik: { bg: "bg-[#f8e5e5]", text: "text-[#e07b72]" },
+  Kerja: { bg: "bg-[#def1d0]", text: "text-[#3d6b35]" },
+  Personal: { bg: "bg-[#cbceea]", text: "text-[#5d65b2]" },
+  Lainnya: { bg: "bg-[rgba(93,93,90,0.15)]", text: "text-[#5d5d5a]" },
 };
 
 // Matching kanban PRIORITY_META badgeBg + badgeText exactly
-const PRIORITY_STYLE: Record<ParsedPriority, { bg: string; text: string; border: string }> = {
-  Tinggi: { bg: "bg-[#fdecea]",               text: "text-[#e07b72]", border: "border-[#e07b72]" },
-  Sedang: { bg: "bg-[#fdf0e0]",               text: "text-[#d4974a]", border: "border-[#d4974a]" },
-  Rendah: { bg: "bg-[rgba(222,241,208,0.6)]", text: "text-[#6bab7e]", border: "border-[#6bab7e]" },
+const PRIORITY_STYLE: Record<
+  ParsedPriority,
+  { bg: string; text: string; border: string }
+> = {
+  Tinggi: {
+    bg: "bg-[#fdecea]",
+    text: "text-[#e07b72]",
+    border: "border-[#e07b72]",
+  },
+  Sedang: {
+    bg: "bg-[#fdf0e0]",
+    text: "text-[#d4974a]",
+    border: "border-[#d4974a]",
+  },
+  Rendah: {
+    bg: "bg-[rgba(222,241,208,0.6)]",
+    text: "text-[#6bab7e]",
+    border: "border-[#6bab7e]",
+  },
 };
 
-const CATEGORIES: ParsedCategory[] = ["Akademik", "Kerja", "Personal", "Lainnya"];
+const CATEGORIES: ParsedCategory[] = [
+  "Akademik",
+  "Kerja",
+  "Personal",
+  "Lainnya",
+];
 const PRIORITIES: ParsedPriority[] = ["Tinggi", "Sedang", "Rendah"];
 
 // ─── Chip toggle ──────────────────────────────────────────────────────────────
 function ChipToggle<T extends string>({
-  value, options, styleMap, onChange,
+  value,
+  options,
+  styleMap,
+  onChange,
 }: {
   value: T;
   options: T[];
@@ -40,7 +68,7 @@ function ChipToggle<T extends string>({
   return (
     <div className="flex gap-2 flex-wrap">
       {options.map((opt) => {
-        const s       = styleMap[opt];
+        const s = styleMap[opt];
         const isActive = value === opt;
         return (
           <button
@@ -48,9 +76,10 @@ function ChipToggle<T extends string>({
             type="button"
             onClick={() => onChange(opt)}
             className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-all cursor-pointer
-              ${isActive
-                ? `${s.bg} ${s.text} ${"border" in s && s.border ? s.border : "border-transparent"}`
-                : "bg-white border-[rgba(33,33,33,0.1)] text-[#5d5d5a]/50 hover:border-[rgba(93,93,90,0.3)]"
+              ${
+                isActive
+                  ? `${s.bg} ${s.text} ${"border" in s && s.border ? s.border : "border-transparent"}`
+                  : "bg-white border-[rgba(33,33,33,0.1)] text-[#5d5d5a]/50 hover:border-[rgba(93,93,90,0.3)]"
               }`}
           >
             {opt}
@@ -68,8 +97,6 @@ interface TaskPreviewStepProps {
 }
 
 export function TaskPreviewStep({ result, onEdit }: TaskPreviewStepProps) {
-  const typeStyle = TYPE_STYLE[result.type];
-
   return (
     <div className="bg-[#f8f6f5] rounded-[12px] p-4 flex flex-col gap-4">
       {/* Preview header + type badge */}
@@ -88,9 +115,10 @@ export function TaskPreviewStep({ result, onEdit }: TaskPreviewStepProps) {
                 type="button"
                 onClick={() => onEdit("type", t)}
                 className={`h-6 px-3 rounded-full text-[11px] font-semibold transition-all cursor-pointer border
-                  ${isActive
-                    ? `${s.bg} ${s.text} border-transparent`
-                    : "bg-white border-[rgba(33,33,33,0.1)] text-[#5d5d5a]/40 hover:border-[rgba(93,93,90,0.2)]"
+                  ${
+                    isActive
+                      ? `${s.bg} ${s.text} border-transparent`
+                      : "bg-white border-[rgba(33,33,33,0.1)] text-[#5d5d5a]/40 hover:border-[rgba(93,93,90,0.2)]"
                   }`}
               >
                 {t}

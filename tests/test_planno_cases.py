@@ -191,6 +191,7 @@ class TestAddTask:
     def test_task_add_01b_nlp_ekstrak_durasi(self):
         """input dengan '2 jam' → duration_minutes = 120"""
         hasil = parser.parse("kerjakan laporan keuangan besok jam 5 sore durasi 2 jam")
+        print(f"Parsed duration_minutes: {hasil.get('duration_minutes')} (type: {type(hasil.get('duration_minutes'))})")
         assert hasil["success"] is True
         assert int(hasil.get("duration_minutes")) == 120
 
@@ -469,6 +470,7 @@ class TestNLPParser:
     def test_nlp_01b_parse_duration_minutes(self):
         """(b) Input '2 jam' → duration_minutes = 120 (int or '120' string)"""
         hasil = parser.parse("Kerjakan soal 2 jam")
+        print(f"Parsed duration_minutes: {hasil.get('duration_minutes')} (type: {type(hasil.get('duration_minutes'))})")
         assert hasil["success"] is True
         # Parser may return int or str depending on LLM output; both are valid
         assert int(hasil.get("duration_minutes")) == 120

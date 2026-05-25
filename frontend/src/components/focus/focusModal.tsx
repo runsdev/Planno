@@ -67,12 +67,14 @@ export function FocusModal({
   // Reset timer state saat modal pertama kali dibuka
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase("focus");
       setSecondsLeft(preset.focusMin * 60);
       setIsRunning(false);
       setCurrentSessionSeconds(0);
       // selectedTask TIDAK direset agar user bisa lanjut task yang sama
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // ─── Fix utama ───────────────────────────────────────────────────────────────
@@ -83,6 +85,7 @@ export function FocusModal({
 
     // Hanya reset jika task benar-benar berganti (bukan saat mount)
     if (prevTaskIdRef.current !== null && prevTaskIdRef.current !== newId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreset(SESSION_PRESETS[0]);
       setPhase("focus");
       setSecondsLeft(SESSION_PRESETS[0].focusMin * 60);
@@ -138,12 +141,14 @@ export function FocusModal({
   // otomatis deselect agar user tidak bisa lanjut timer task yang sudah selesai
   useEffect(() => {
     if (selectedTask && completedTaskIds.includes(selectedTask.id)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTask(null);
       setIsRunning(false);
       setPhase("focus");
       setSecondsLeft(preset.focusMin * 60);
       setCurrentSessionSeconds(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedTaskIds, selectedTask?.id]);
 
   const handleTogglePlay = () => {
