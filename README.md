@@ -54,8 +54,7 @@ main otomatis memicu proses build dan deployment.
 Bertanggung jawab atas seluruh pengembangan antarmuka pengguna aplikasi 
 Planno. Merancang dan mengimplementasikan tampilan menggunakan Next.js 16 
 dengan TypeScript dan Tailwind CSS. Membangun halaman autentikasi dengan 
-Google OAuth melalui NextAuth v5, halaman onboarding untuk pengumpulan 
-preferensi pengguna, halaman planner dengan kanban board untuk visualisasi 
+Google OAuth melalui NextAuth v5, halaman planner dengan kanban board untuk visualisasi 
 task berdasarkan prioritas, right sidebar untuk menampilkan daily briefing 
 dan top 3 prioritas, serta focus mode dengan timer Pomodoro untuk sesi 
 kerja terstruktur.
