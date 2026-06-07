@@ -30,10 +30,16 @@ class TaskParser:
         tiga_hari = today + timedelta(days=3)
         weekday   = today.weekday()
         nama_hari = ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"]
+        
         hari_minggu_ini = {}
         for i, nama in enumerate(nama_hari):
-            tgl = today + timedelta(days=(i - weekday))
+            diff = i - weekday
+            # ← FIX: kalau hasilnya negatif (hari sudah lewat minggu ini), pakai minggu depan
+            if diff < 0:
+                diff += 7
+            tgl = today + timedelta(days=diff)
             hari_minggu_ini[nama] = tgl.strftime("%Y-%m-%d")
+        
         minggu_depan_senin = today + timedelta(days=(7 - weekday))
         return {
             "hari_ini"          : today.strftime("%Y-%m-%d"),
@@ -45,7 +51,7 @@ class TaskParser:
             "nama_hari_ini"     : nama_hari[weekday],
             "nama_besok"        : nama_hari[(weekday + 1) % 7],
             "nama_lusa"         : nama_hari[(weekday + 2) % 7],
-        }
+    }
 
     def _parse_jam_token(self, jam_str: str, konteks: str = "") -> tuple:
         jam_str = jam_str.strip()

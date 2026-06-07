@@ -6,6 +6,7 @@ import { TaskInputStep } from "./taskInputStep";
 import { TaskPreviewStep } from "./taskPreviewStep";
 import { api } from "@/lib/api";
 import { formatDeadline } from "@/lib/utils";
+import { validateTaskInput } from "./validateTaskInput";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ParsedType = "Tugas" | "Acara";
@@ -174,13 +175,19 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
 
   const handleParse = async () => {
     if (!input.trim() || isParsing) return;
-
+  
+    // ← Validasi client-side dulu sebelum hit AI
+    const validationError = validateTaskInput(input);
+    if (validationError) {
+      setParseError(validationError);
+      return;
+    }
+  
     setIsParsing(true);
     setParseError(null);
-
+  
     try {
       const result = await parseWithAI(input);
-
       setParsed(result);
       setStep("preview");
     } catch (err) {
@@ -239,22 +246,19 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
           {/* Input always visible */}
           <TaskInputStep
             value={input}
-            onChange={setInput}
+            onChange={(v) => {
+              setInput(v);
+              if (parseError) setParseError(null); 
+            }}
             onSubmit={handleParse}
             isParsing={isParsing}
             hasResult={step === "preview"}
+            error={parseError}
           />
 
           {/* Preview shown after parse */}
           {step === "preview" && parsed && (
             <TaskPreviewStep result={parsed} onEdit={handleEdit} />
-          )}
-
-          {/* Error message */}
-          {parseError && (
-            <p className="text-[12.25px] font-medium text-[#e07b72]">
-              {parseError}
-            </p>
           )}
 
           {/* Helper text */}
