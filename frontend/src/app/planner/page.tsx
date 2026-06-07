@@ -38,6 +38,29 @@ function parsedToTask(result: ParsedResult): Omit<Task, "id"> {
   };
 }
 
+function buildOccupiedSlots(tasks: Task[]): Array<{ start: string; end: string }> {
+  return tasks
+    .filter((t) => t.deadline && !t.completed)
+    .flatMap((t) => {
+      const endDt = new Date(t.deadline!);
+      if (endDt.getHours() === 0 && endDt.getMinutes() === 0) return [];
+
+      const jamMatch  = t.duration?.match(/(\d+)\s*jam/);
+      const mntMatch  = t.duration?.match(/(\d+)\s*mnt/);
+      const totalMins = (jamMatch ? parseInt(jamMatch[1]) * 60 : 0)
+                      + (mntMatch ? parseInt(mntMatch[1]) : 0)
+                      || 60;
+
+      const startDt = new Date(endDt.getTime() - totalMins * 60_000);
+      const fmt = (d: Date) => {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+
+      return [{ start: fmt(startDt), end: fmt(endDt) }];
+    });
+}
+
 function PlannerContent() {
   const searchParams = useSearchParams();
   // const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
@@ -177,7 +200,10 @@ function PlannerContent() {
         taskProgress={taskProgress}
         onSessionFinished={handleSessionFinished}
         completedTaskIds={completedTaskIds}
-        onOpenAddTask={() => setAddModalOpen(true)}
+        onOpenAddTask={() => {
+          console.log("openAddTask clicked"); 
+          setAddModalOpen(true);
+        }}
         tasks={focusTasks}
       />
 
@@ -205,6 +231,7 @@ function PlannerContent() {
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSave={handleAddTask}
+        occupiedSlots={buildOccupiedSlots(tasks)}
       />
     </div>
   );

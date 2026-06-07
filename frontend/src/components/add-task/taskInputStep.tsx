@@ -26,7 +26,7 @@ export function TaskInputStep({
               onSubmit();
             }
           }}
-          placeholder={`Ketik tugas atau acara... cth: 'kerjakan laporan besok jam 23:59' atau 'kuliah senpro Senin jam 10'`}
+          placeholder={`Ketik tugas atau acara... cth: 'kerjakan laporan besok jam 16.00 sampai 18.00' atau 'kuliah statistika Senin jam 10'`}
           rows={3}
           disabled={isParsing || hasResult}
           className={`w-full resize-none rounded-[12px] border px-4 py-3 text-[13px] text-[#212121] placeholder:text-[#5d5d5a]/40 outline-none transition-colors leading-5

@@ -148,23 +148,36 @@ function AISmallBadge() {
 }
 
 // ─── Event card ───────────────────────────────────────────────────────────────
-function CalendarEventCard({ event }: { event: CalendarEvent }) {
-  const c = CAL_COLOR[event.color];
-  const top = getTimePx(event.startHour);
-  const height = Math.max((event.endHour - event.startHour) * HOUR_H, 22);
-  const isShort = height < 44;
+function CalendarEventCard({
+  event,
+  colWidth = 1,
+  colIndex = 0,
+}: {
+  event: CalendarEvent;
+  colWidth?: number;
+  colIndex?: number;
+}) {
+  const c         = CAL_COLOR[event.color];
+  const top       = getTimePx(event.startHour);
+  const height    = Math.max((event.endHour - event.startHour) * HOUR_H, 22);
+  const isShort   = height < 44;
   const timeLabel = `${toTimeStr(event.startHour)} – ${toTimeStr(event.endHour)}`;
+  const widthPct  = 100 / colWidth;
+  const leftPct   = widthPct * colIndex;
 
   return (
     <div
-      className={`absolute left-1 right-1 rounded-[10.5px] shadow-[0px_1px_4px_0px_rgba(33,33,33,0.08)] border-l-4 ${c.bg} ${c.border} overflow-hidden cursor-pointer hover:brightness-[0.97] transition-all`}
-      style={{ top, height }}
+      className={`absolute rounded-[10.5px] shadow-[0px_1px_4px_0px_rgba(33,33,33,0.08)] border-l-4 ${c.bg} ${c.border} overflow-hidden cursor-pointer hover:brightness-[0.97] transition-all`}
+      style={{
+        top,
+        height,
+        left  : `calc(${leftPct}% + 2px)`,
+        width : `calc(${widthPct}% - 4px)`,
+      }}
     >
       {isShort ? (
         <div className="flex items-center gap-1 px-2 h-full">
-          <p
-            className={`text-[11px] font-semibold ${c.titleText} truncate flex-1`}
-          >
+          <p className={`text-[11px] font-semibold ${c.titleText} truncate flex-1`}>
             {event.title}
           </p>
           {event.hasAI && <AISmallBadge />}
@@ -172,9 +185,7 @@ function CalendarEventCard({ event }: { event: CalendarEvent }) {
       ) : (
         <div className="px-2 py-1.5 flex flex-col gap-0.5 h-full overflow-hidden">
           <div className="flex items-start justify-between gap-1">
-            <p
-              className={`text-[12px] font-semibold ${c.titleText} leading-3.75 line-clamp-2 flex-1`}
-            >
+            <p className={`text-[12px] font-semibold ${c.titleText} leading-3.75 line-clamp-2 flex-1`}>
               {event.title}
             </p>
             {event.hasAI && (
@@ -210,6 +221,29 @@ function NoTimePill({
       {event.title}
     </div>
   );
+}
+
+// ─── Group overlapping events for side-by-side layout ────────────────────────
+function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
+  if (events.length === 0) return [];
+
+  // Sort by startHour
+  const sorted = [...events].sort((a, b) => a.startHour - b.startHour);
+  const groups: CalendarEvent[][] = [];
+
+  for (const event of sorted) {
+    // Cari group yang ada overlap dengan event ini
+    const targetGroup = groups.find((g) =>
+      g.some((e) => e.startHour < event.endHour && e.endHour > event.startHour)
+    );
+    if (targetGroup) {
+      targetGroup.push(event);
+    } else {
+      groups.push([event]);
+    }
+  }
+
+  return groups;
 }
 
 // ─── Calendar view ────────────────────────────────────────────────────────────
@@ -439,9 +473,16 @@ export function CalendarView({ tasks }: { tasks: Task[] }) {
                   </div>
                 )}
 
-                {dayEvents.map((e) => (
-                  <CalendarEventCard key={e.id} event={e} />
-                ))}
+                {groupOverlappingEvents(dayEvents).flatMap((group) =>
+                  group.map((e, idx) => (
+                    <CalendarEventCard
+                      key={e.id}
+                      event={e}
+                      colWidth={group.length}
+                      colIndex={idx}
+                    />
+                  ))
+                )}
               </div>
             );
           })}

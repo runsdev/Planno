@@ -7,6 +7,13 @@ const KATA_KERJA = [
     "ikut", "hadiri", "pergi", "temui", "hubungi", "telpon", "zoom",
     "interview", "konsultasi", "periksa", "cek", "urus", "bayar",
     "daftar", "ambil", "antar", "jemput", "belanja", "masak",
+    "sidang", "praktikum", "les", "bimbingan", "seminar", "workshop",
+    "main", "kumpul", "nongkrong", "hangout", "servis", "bayar",
+    "cuci", "setrika", "bersih", "rapikan", "perbaiki", "ganti",
+    "update", "backup", "restore", "install", "uninstall", "konfigurasi",
+    "program", "coding", "debug", "test", "deploy", "design", "gambar",
+    "tulis", "baca", "riset", "analisis", "evaluasi", "lapor",
+    "catat", "ingat", "ingatkan", "reminder", "alarm", "notifikasi",
   ];
   
   const KATA_WAKTU = [
@@ -15,7 +22,8 @@ const KATA_KERJA = [
     "januari", "februari", "maret", "april", "mei", "juni",
     "juli", "agustus", "september", "oktober", "november", "desember",
     "jam", "pukul", "pk", "siang", "malam", "pagi", "sore",
-    "tanggal", "tgl",
+    "tanggal", "tgl", "nanti", "menit", "detik", "subuh", "tengah malam",
+    "minggu ini", "bulan ini", "tahun ini", "pekan ini",
   ];
   
   export function validateTaskInput(input: string): string | null {

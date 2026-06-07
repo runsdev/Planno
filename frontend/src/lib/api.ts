@@ -37,6 +37,13 @@ export interface ScoreTaskResponse {
   importance: string;
 }
 
+export interface CheckSlotResponse {
+  has_conflict: boolean;
+  original_start: string;
+  suggested_start: string | null;
+  suggested_end: string | null;
+}
+
 // ── Onboarding ────────────────────────────────────────────────────────────────
 
 export interface OnboardingConfig {
@@ -106,6 +113,12 @@ export const api = {
 
   simpleBriefing: (data: { user_name: string; top_tasks: BriefingTask[] }) =>
     post<{ briefing_text: string }>("/api/briefing/simple", data),
+
+    checkSlot: (data: {
+      proposed_start: string;
+      duration_minutes: number;
+      occupied_slots: Array<{ start: string; end: string }>;
+    }) => post<CheckSlotResponse>("/api/tasks/check-slot", data),
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

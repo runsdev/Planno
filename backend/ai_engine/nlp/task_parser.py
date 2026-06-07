@@ -121,11 +121,13 @@ class TaskParser:
         except:
             return None
 
-    def _format_deadline(self, tanggal: str, jam_mulai: str):
+    def _format_deadline(self, tanggal: str, jam_mulai: str, jam_selesai: str = None) -> str | None:
         if not tanggal:
             return None
-        if jam_mulai:
-            return f"{tanggal} {jam_mulai}"
+        # Gunakan jam_selesai sebagai deadline jika ada, fallback ke jam_mulai
+        jam = jam_selesai if jam_selesai else jam_mulai
+        if jam:
+            return f"{tanggal} {jam}"
         return f"{tanggal} 00:00"
 
     def _deteksi_type(self, raw_input: str):
@@ -357,7 +359,7 @@ Output HANYA JSON ini (tidak ada teks lain):
             llm_data = json.loads(json_match.group())
             category = llm_data.get("category", "Lainnya")
             tgl_str  = llm_data.get("tanggal")
-            deadline = self._format_deadline(tgl_str, jam_mulai)
+            deadline = self._format_deadline(tgl_str, jam_mulai, jam_selesai)
 
             category_map = {
                 "Akademik": "academic",

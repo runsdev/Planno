@@ -21,6 +21,8 @@ export interface ParsedResult {
   duration: string;
   category: ParsedCategory;
   priority: ParsedPriority;
+  rescheduled?: boolean;      
+  originalDeadline?: string;
 }
 
 type Step = "input" | "preview";
@@ -79,7 +81,10 @@ function getClientNow(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-async function parseWithAI(input: string): Promise<ParsedResult> {
+async function parseWithAI(
+  input: string,
+  occupiedSlots: Array<{ start: string; end: string }> = [],
+): Promise<ParsedResult> {
   const parsed = await api.parseTask(input, getClientNow());
 
   if (!parsed.success) {
@@ -87,12 +92,8 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
   }
 
   const category = mapCategory(parsed.category);
-
   const importanceMap: Record<ParsedCategory, string> = {
-    Akademik: "high",
-    Kerja: "high",
-    Personal: "medium",
-    Lainnya: "low",
+    Akademik: "high", Kerja: "high", Personal: "medium", Lainnya: "low",
   };
 
   const scored = await api.scoreTask({
@@ -105,26 +106,51 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
     client_now: getClientNow(),
   });
 
+  // Cek konflik slot jika ada deadline & jam
+  let deadlineISO = parsed.deadline ?? null;
+  let rescheduled = false;
+  let originalDeadline: string | undefined;
+
+  if (parsed.deadline && parsed.jam_mulai && occupiedSlots.length > 0) {
+    try {
+      // ← Hitung start time yang benar (deadline - duration)
+      const deadlineDt  = new Date(parsed.deadline.replace(" ", "T"));
+      const durationMs  = (parsed.duration_minutes ?? 60) * 60_000;
+      const startDt     = new Date(deadlineDt.getTime() - durationMs);
+      const pad         = (n: number) => String(n).padStart(2, "0");
+      const proposedStart = `${startDt.getFullYear()}-${pad(startDt.getMonth()+1)}-${pad(startDt.getDate())} ${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+  
+      const slotCheck = await api.checkSlot({
+        proposed_start   : proposedStart,   // ← start, bukan deadline
+        duration_minutes : parsed.duration_minutes ?? 60,
+        occupied_slots   : occupiedSlots,
+      });
+  
+      if (slotCheck.has_conflict && slotCheck.suggested_start) {
+        originalDeadline = parsed.deadline;
+        // suggested_start = new start → deadline = start + duration
+        const newStartDt  = new Date(slotCheck.suggested_start.replace(" ", "T"));
+        const newEndDt    = new Date(newStartDt.getTime() + durationMs);
+        deadlineISO = `${newEndDt.getFullYear()}-${pad(newEndDt.getMonth()+1)}-${pad(newEndDt.getDate())} ${pad(newEndDt.getHours())}:${pad(newEndDt.getMinutes())}`;
+        rescheduled = true;
+      }
+    } catch {
+ 
+    }
+  }
+
   return {
-    type:
-      parsed.type === "Tugas" || parsed.type === "Acara"
-        ? parsed.type
-        : "Tugas",
-
+    type: parsed.type === "Tugas" || parsed.type === "Acara" ? parsed.type : "Tugas",
     title: parsed.title ?? input,
-
-    deadline: formatDeadline(parsed.deadline),
-
-    deadlineISO: parsed.deadline ?? null,
-
+    deadline: formatDeadline(deadlineISO),
+    deadlineISO,
     duration: formatDuration(parsed.duration_minutes),
-
     category,
-
-    priority: isToday(parsed.deadline)
+    priority: isToday(deadlineISO)
       ? "Tinggi"
-      : ((scored.priority_label as ParsedPriority) ??
-        mapQuadrantToPriority(scored.quadrant)),
+      : ((scored.priority_label as ParsedPriority) ?? mapQuadrantToPriority(scored.quadrant)),
+    rescheduled,
+    originalDeadline,
   };
 }
 
@@ -133,12 +159,11 @@ async function parseWithAI(input: string): Promise<ParsedResult> {
 interface AddTaskModalProps {
   open: boolean;
   onClose: () => void;
-
-  // TODO: wire this up to actual task/event store
   onSave: (result: ParsedResult) => void;
+  occupiedSlots?: Array<{ start: string; end: string }>;
 }
 
-export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
+export function AddTaskModal({ open, onClose, onSave, occupiedSlots = [] }: AddTaskModalProps) {
   const [step, setStep] = useState<Step>("input");
   const [input, setInput] = useState("");
   const [parsed, setParsed] = useState<ParsedResult | null>(null);
@@ -174,9 +199,10 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
   if (!open) return null;
 
   const handleParse = async () => {
+    console.log("handleParse fired");
+  
     if (!input.trim() || isParsing) return;
   
-    // ← Validasi client-side dulu sebelum hit AI
     const validationError = validateTaskInput(input);
     if (validationError) {
       setParseError(validationError);
@@ -187,12 +213,12 @@ export function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
     setParseError(null);
   
     try {
-      const result = await parseWithAI(input);
+      const result = await parseWithAI(input, occupiedSlots);
       setParsed(result);
       setStep("preview");
     } catch (err) {
       setParseError(
-        err instanceof Error ? err.message : "Gagal memproses. Coba lagi.",
+        err instanceof Error ? err.message : "Gagal memproses. Coba lagi."
       );
     } finally {
       setIsParsing(false);

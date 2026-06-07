@@ -7,6 +7,8 @@ import {
   ParsedType,
 } from "./addTaskModal";
 import { TaskPreviewField, PreviewTextInput } from "./taskPreviewField";
+import { formatDeadline } from "@/lib/utils";
+import { CalendarClock } from "lucide-react";
 
 // ─── Style maps — same tokens as kanban cards ─────────────────────────────────
 const TYPE_STYLE: Record<ParsedType, { bg: string; text: string }> = {
@@ -136,6 +138,20 @@ export function TaskPreviewStep({ result, onEdit }: TaskPreviewStepProps) {
         />
       </TaskPreviewField>
 
+      {/* Reschedule notice */}
+      {result.rescheduled && result.originalDeadline && (
+        <div className="flex items-start gap-2 bg-[#fdf0e0] rounded-[8px] px-3 py-2">
+          <CalendarClock className="w-3.5 h-3.5 text-[#d4974a] mt-0.5 shrink-0" />
+          <p className="text-[11px] text-[#d4974a] leading-4">
+            Waktu bentrok — dijadwalkan ulang dari{" "}
+            <span className="font-semibold">
+              {formatDeadline(result.originalDeadline)}
+            </span>{" "}
+            ke waktu kosong terdekat
+          </p>
+        </div>
+      )}
+
       {/* Deadline + Durasi */}
       <div className="grid grid-cols-2 gap-3">
         <TaskPreviewField label="Deadline">
@@ -174,7 +190,9 @@ export function TaskPreviewStep({ result, onEdit }: TaskPreviewStepProps) {
 
       {/* AI note */}
       <p className="text-[11px] font-normal italic text-[#6b6b6b]">
-        AI akan menjadwalkan tugas ini di slot kosong yang sesuai.
+        {result.rescheduled
+          ? "Waktu sudah disesuaikan otomatis agar tidak bentrok."
+          : "AI akan menjadwalkan tugas ini di slot kosong yang sesuai."}
       </p>
     </div>
   );
