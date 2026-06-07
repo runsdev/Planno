@@ -188,6 +188,29 @@ function PlannerContent() {
       priority: t.priority as FocusTask["priority"],
     }));
 
+  const handleEditTask = useCallback(async (updated: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    try {
+      await fetch(`/api/tasks/${updated.id}`, {
+        method  : "PATCH",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify({
+          title    : updated.title,
+          category : updated.category,
+          priority : updated.priority,
+          duration : updated.duration,
+        }),
+      });
+    } catch {}
+  }, []);
+
+  const handleDeleteTask = useCallback(async (id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    try {
+      await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    } catch {}
+  }, []);
+
   return (
     <div
       className="min-h-screen bg-[#f8f6f5] flex flex-col"
@@ -217,6 +240,8 @@ function PlannerContent() {
             onFilterChange={setActiveFilter}
             onToggleTask={toggleTask}
             onOpenAddTask={() => setAddModalOpen(true)}
+            onEditTask={handleEditTask} 
+            onDeleteTask={handleDeleteTask}
           />
         </div>
         <div

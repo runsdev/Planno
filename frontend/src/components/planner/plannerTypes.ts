@@ -1,3 +1,4 @@
+// /Users/maritzavania/sem-6/senpro-jelek/Planno/frontend/src/components/planner/plannerTypes.ts
 export type Priority = "Tinggi" | "Sedang" | "Rendah";
 export type Category = "Akademik" | "Kerja" | "Personal" | "Lainnya";
 export type FilterType =
