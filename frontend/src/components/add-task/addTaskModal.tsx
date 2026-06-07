@@ -8,319 +8,247 @@ import { api } from "@/lib/api";
 import { formatDeadline } from "@/lib/utils";
 import { validateTaskInput } from "./validateTaskInput";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-export type ParsedType = "Tugas" | "Acara";
+export type ParsedType     = "Tugas" | "Acara";
 export type ParsedCategory = "Akademik" | "Kerja" | "Personal" | "Lainnya";
 export type ParsedPriority = "Tinggi" | "Sedang" | "Rendah";
 
 export interface ParsedResult {
-  type: ParsedType;
-  title: string;
-  deadline: string; // human-readable display label
-  deadlineISO: string | null; // raw ISO datetime for DB storage
-  duration: string;
-  category: ParsedCategory;
-  priority: ParsedPriority;
-  rescheduled?: boolean;      
+  type            : ParsedType;
+  title           : string;
+  deadline        : string;
+  deadlineISO     : string | null;
+  startISO        : string | null; 
+  duration        : string;
+  category        : ParsedCategory;
+  priority        : ParsedPriority;
+  rescheduled     ?: boolean;
   originalDeadline?: string;
+  tanggal_kegiatan?: string;
 }
 
 type Step = "input" | "preview";
 
-// ─── Mapping helpers ──────────────────────────────────────────────────────────
-
-function mapCategory(backendCat: string | null | undefined): ParsedCategory {
+function mapCategory(cat: string | null | undefined): ParsedCategory {
   const map: Record<string, ParsedCategory> = {
-    academic: "Akademik",
-    work: "Kerja",
-    personal: "Personal",
-    health: "Lainnya",
+    academic: "Akademik", work: "Kerja", personal: "Personal", health: "Lainnya",
   };
-
-  return map[backendCat ?? ""] ?? "Lainnya";
-}
-
-function mapQuadrantToPriority(quadrant: string): ParsedPriority {
-  if (quadrant === "DO_FIRST") return "Tinggi";
-  if (quadrant === "SCHEDULE") return "Sedang";
-
-  return "Rendah";
+  return map[cat ?? ""] ?? "Lainnya";
 }
 
 function formatDuration(mins: number | null | undefined): string {
   if (!mins) return "~1 jam";
-
   if (mins < 60) return `~${mins} mnt`;
-
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-
-  return m > 0 ? `~${h} jam ${m} mnt` : `~${h} jam`;
+  return m ? `~${h} jam ${m} mnt` : `~${h} jam`;
 }
-
-// ─── Priority Rules ───────────────────────────────────────────────────────────
 
 function isToday(dateString: string | null | undefined): boolean {
   if (!dateString) return false;
-
-  const date = new Date(dateString);
-  const now = new Date();
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
+  const d = new Date(dateString);
+  const n = new Date();
+  return d.getFullYear() === n.getFullYear() &&
+         d.getMonth()    === n.getMonth()    &&
+         d.getDate()     === n.getDate();
 }
 
-// ─── Real AI parser ───────────────────────────────────────────────────────────
-
-function getClientNow(): string {
+function getClientNow() {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-async function parseWithAI(
-  input: string,
-  occupiedSlots: Array<{ start: string; end: string }> = [],
-): Promise<ParsedResult> {
+async function parseWithAI(input: string, occupiedSlots: Array<{ start: string; end: string }> = []): Promise<ParsedResult> {
   const parsed = await api.parseTask(input, getClientNow());
-
-  if (!parsed.success) {
-    throw new Error(parsed.error ?? "Gagal memproses input");
-  }
+  if (!parsed.success) throw new Error(parsed.error ?? "Gagal parsing");
 
   const category = mapCategory(parsed.category);
-  const importanceMap: Record<ParsedCategory, string> = {
-    Akademik: "high", Kerja: "high", Personal: "medium", Lainnya: "low",
-  };
+  const pad        = (n: number) => String(n).padStart(2, "0");
+  const durationMs = (parsed.duration_minutes ?? 60) * 60_000;
 
+  let deadlineISO      = parsed.deadline ?? null;
+  let rescheduled      = false;
+  let originalDeadline : string | undefined;
+
+  // Gunakan tanggal_kegiatan dari AI, fallback ke tanggal deadline, fallback ke hari ini
+  let tglKegiatanRaw = (parsed as any).tanggal_kegiatan || (parsed.deadline ? parsed.deadline.split(" ")[0] : getClientNow().split(" ")[0]);
+
+  // ─── PERBAIKAN UTAMA 1: HITUNG SKOR MENGGUNAKAN DEADLINE ISO ASLI ───────────
   const scored = await api.scoreTask({
-    deadline: parsed.deadline,
-    importance: importanceMap[category],
-    duration_minutes: parsed.duration_minutes,
-    reschedule_count: 0,
-    category: parsed.category,
-    type: parsed.type,
-    client_now: getClientNow(),
+    deadline         : deadlineISO, // Kirim format ISO murni (YYYY-MM-DD HH:mm), BUKAN format tampilan UI!
+    importance       : category === "Akademik" || category === "Kerja" ? "high" : category === "Personal" ? "medium" : "low",
+    duration_minutes : parsed.duration_minutes ?? 60,
+    reschedule_count : 0,
+    category         : parsed.category,
+    type             : parsed.type,
+    client_now       : getClientNow(),
   });
-
-  // Cek konflik slot jika ada deadline & jam
-  let deadlineISO = parsed.deadline ?? null;
-  let rescheduled = false;
-  let originalDeadline: string | undefined;
 
   if (parsed.deadline && parsed.jam_mulai && occupiedSlots.length > 0) {
     try {
-      // ← Hitung start time yang benar (deadline - duration)
-      const deadlineDt  = new Date(parsed.deadline.replace(" ", "T"));
-      const durationMs  = (parsed.duration_minutes ?? 60) * 60_000;
-      const startDt     = new Date(deadlineDt.getTime() - durationMs);
-      const pad         = (n: number) => String(n).padStart(2, "0");
+      const deadlineDt    = new Date(parsed.deadline.replace(" ", "T"));
+      const startDt       = new Date(deadlineDt.getTime() - durationMs);
       const proposedStart = `${startDt.getFullYear()}-${pad(startDt.getMonth()+1)}-${pad(startDt.getDate())} ${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
-  
+
       const slotCheck = await api.checkSlot({
-        proposed_start   : proposedStart,   // ← start, bukan deadline
+        proposed_start   : proposedStart,
         duration_minutes : parsed.duration_minutes ?? 60,
         occupied_slots   : occupiedSlots,
       });
-  
+
       if (slotCheck.has_conflict && slotCheck.suggested_start) {
         originalDeadline = parsed.deadline;
-        // suggested_start = new start → deadline = start + duration
-        const newStartDt  = new Date(slotCheck.suggested_start.replace(" ", "T"));
-        const newEndDt    = new Date(newStartDt.getTime() + durationMs);
-        deadlineISO = `${newEndDt.getFullYear()}-${pad(newEndDt.getMonth()+1)}-${pad(newEndDt.getDate())} ${pad(newEndDt.getHours())}:${pad(newEndDt.getMinutes())}`;
-        rescheduled = true;
+        const newStart   = new Date(slotCheck.suggested_start.replace(" ", "T"));
+        const newEnd     = new Date(newStart.getTime() + durationMs);
+        deadlineISO      = `${newEnd.getFullYear()}-${pad(newEnd.getMonth()+1)}-${pad(newEnd.getDate())} ${pad(newEnd.getHours())}:${pad(newEnd.getMinutes())}`;
+        rescheduled      = true;
       }
-    } catch {
- 
-    }
+    } catch { /* silent */ }
+  }
+
+  // ─── PERBAIKAN LOGIKA START_ISO ─────────────────────────────────────────────
+  let startISO: string | null = null;
+  if (parsed.jam_mulai) {
+    startISO = `${tglKegiatanRaw} ${parsed.jam_mulai}`;
+  } else if (deadlineISO) {
+    const endDt   = new Date(deadlineISO.replace(" ", "T"));
+    const startDt = new Date(endDt.getTime() - durationMs);
+    startISO = `${startDt.getFullYear()}-${pad(startDt.getMonth()+1)}-${pad(startDt.getDate())} ${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
   }
 
   return {
-    type: parsed.type === "Tugas" || parsed.type === "Acara" ? parsed.type : "Tugas",
-    title: parsed.title ?? input,
-    deadline: formatDeadline(deadlineISO),
+    type            : (parsed.type === "Tugas" || parsed.type === "Acara" ? parsed.type : "Tugas") as ParsedType,
+    title           : parsed.title ?? input,
+    deadline        : formatDeadline(deadlineISO), // Ini baru diubah ke format UI di paling akhir
     deadlineISO,
-    duration: formatDuration(parsed.duration_minutes),
+    startISO,
+    duration        : formatDuration(parsed.duration_minutes),
     category,
-    priority: isToday(deadlineISO)
-      ? "Tinggi"
-      : ((scored.priority_label as ParsedPriority) ?? mapQuadrantToPriority(scored.quadrant)),
+    priority        : (isToday(deadlineISO) ? "Tinggi" : (scored.priority_label === "high" || scored.priority_label === "Tinggi" ? "Tinggi" : scored.priority_label === "medium" || scored.priority_label === "Sedang" ? "Sedang" : "Rendah")) as ParsedPriority,
     rescheduled,
     originalDeadline,
+    tanggal_kegiatan: tglKegiatanRaw,
   };
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-interface AddTaskModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSave: (result: ParsedResult) => void;
-  occupiedSlots?: Array<{ start: string; end: string }>;
+interface Props {
+  open          : boolean;
+  onClose       : () => void;
+  onSave        : (r: ParsedResult) => void;
+  occupiedSlots ?: Array<{ start: string; end: string }>;
 }
 
-export function AddTaskModal({ open, onClose, onSave, occupiedSlots = [] }: AddTaskModalProps) {
-  const [step, setStep] = useState<Step>("input");
-  const [input, setInput] = useState("");
-  const [parsed, setParsed] = useState<ParsedResult | null>(null);
+export function AddTaskModal({ open, onClose, onSave, occupiedSlots = [] }: Props) {
+  const [step,      setStep]      = useState<Step>("input");
+  const [input,     setInput]     = useState("");
+  const [parsed,    setParsed]    = useState<ParsedResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
+  const [error,     setError]     = useState<string | null>(null);
 
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const overlayRef   = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
 
-  // Reset state setiap modal dibuka
+  useEffect(() => { return () => { isMountedRef.current = false; }; }, []);
+
   useEffect(() => {
-    if (open) {
-      setStep("input");
-      setInput("");
-      setParsed(null);
-      setIsParsing(false);
-      setParseError(null);
-    }
+    if (open) { setStep("input"); setInput(""); setParsed(null); setIsParsing(false); setError(null); }
   }, [open]);
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
-    document.addEventListener("keydown", handler);
-
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   const handleParse = async () => {
-    console.log("handleParse fired");
-  
-    if (!input.trim() || isParsing) return;
-  
+    if (isParsing || !input.trim()) return;
+
     const validationError = validateTaskInput(input);
-    if (validationError) {
-      setParseError(validationError);
-      return;
-    }
-  
-    setIsParsing(true);
-    setParseError(null);
-  
+    if (validationError) { setError(validationError); return; }
+
     try {
+      setIsParsing(true);
+      setError(null);
       const result = await parseWithAI(input, occupiedSlots);
+      if (!isMountedRef.current) return;
       setParsed(result);
       setStep("preview");
     } catch (err) {
-      setParseError(
-        err instanceof Error ? err.message : "Gagal memproses. Coba lagi."
-      );
+      setError(err instanceof Error ? err.message : "Gagal memproses");
     } finally {
-      setIsParsing(false);
+      if (isMountedRef.current) setIsParsing(false);
     }
   };
 
   const handleSave = () => {
     if (!parsed) return;
-
     onSave(parsed);
     onClose();
   };
 
-  const handleEdit = (field: keyof ParsedResult, value: string) => {
-    if (!parsed) return;
-
-    setParsed({ ...parsed, [field]: value });
+  const handleEdit = (updates: Partial<ParsedResult>) => {
+    setParsed((prev) => prev ? { ...prev, ...updates } : null);
   };
 
+  if (!open) return null;
+
   return (
-    // Overlay
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
-      onMouseDown={(e) => {
-        if (e.target === overlayRef.current) onClose();
+      onClick={(e) => { 
+        // Memastikan klik benar-benar terjadi pada area overlay luar, bukan modal card
+        if (e.target === overlayRef.current) onClose(); 
       }}
     >
-      {/* Modal card */}
+      {/* Modal card — tetap mempertahankan desain dan pembatalan event bubble */}
       <div
-        className="relative bg-white rounded-[18px] shadow-[0px_8px_32px_0px_rgba(33,33,33,0.16)] w-full max-w-120 mx-4 flex flex-col overflow-hidden"
+        className="relative bg-white rounded-[18px] shadow-[0px_8px_32px_0px_rgba(33,33,33,0.16)] w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]"
         style={{ fontFamily: "var(--font-plus-jakarta-sans), sans-serif" }}
+        onClick={(e) => e.stopPropagation()} 
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <h2 className="text-[18px] font-semibold text-[#212121]">
-            Tambah Dengan AI
-          </h2>
 
-          <button
-            type="button"
-            onClick={onClose}
+        {/* Header — sticky */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
+          <h2 className="text-[18px] font-semibold text-[#212121]">Tambah Dengan AI</h2>
+          <button type="button" onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-full text-[#5d5d5a]/50 hover:bg-[#5d5d5a]/10 hover:text-[#5d5d5a] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 pb-6 flex flex-col gap-4">
-          {/* Input always visible */}
+        {/* Body — scrollable */}
+        <div className="px-6 pb-6 flex flex-col gap-4 overflow-y-auto">
           <TaskInputStep
             value={input}
-            onChange={(v) => {
-              setInput(v);
-              if (parseError) setParseError(null); 
-            }}
+            onChange={(v) => { setInput(v); if (error) setError(null); }}
             onSubmit={handleParse}
             isParsing={isParsing}
             hasResult={step === "preview"}
-            error={parseError}
+            error={error}
           />
 
-          {/* Preview shown after parse */}
           {step === "preview" && parsed && (
             <TaskPreviewStep result={parsed} onEdit={handleEdit} />
           )}
 
-          {/* Helper text */}
-          {!parseError && (
+          {!error && (
             <p className="text-[12.25px] font-normal text-[#6b6b6b]">
-              AI akan mendeteksi apakah ini tugas atau acara, lalu mengisi
-              detailnya otomatis.
+              AI akan mendeteksi apakah ini tugas atau acara, lalu mengisi detailnya otomatis.
             </p>
           )}
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
+            <button type="button" onClick={onClose}
               className="h-9 px-4 text-[13px] font-medium text-[#5d5d5a] hover:text-[#212121] transition-colors cursor-pointer"
-            >
-              Batal
-            </button>
+            >Batal</button>
 
             <button
               type="button"
               onClick={step === "input" ? handleParse : handleSave}
               disabled={!input.trim() || isParsing}
               className={`h-9 px-5 rounded-[10.5px] text-[13px] font-semibold transition-all cursor-pointer
-                ${
-                  input.trim() && !isParsing
-                    ? "bg-[#4a4a47] text-[#f8f6f5] hover:bg-[#333331]"
-                    : "bg-[rgba(93,93,90,0.12)] text-[#5d5d5a]/40 cursor-not-allowed"
+                ${input.trim() && !isParsing
+                  ? "bg-[#4a4a47] text-[#f8f6f5] hover:bg-[#333331]"
+                  : "bg-[rgba(93,93,90,0.12)] text-[#5d5d5a]/40 cursor-not-allowed"
                 }`}
             >
-              {isParsing
-                ? "Memproses..."
-                : step === "preview"
-                  ? "Simpan"
-                  : "Lanjut"}
+              {isParsing ? "Memproses..." : step === "preview" ? "Simpan" : "Lanjut"}
             </button>
           </div>
         </div>

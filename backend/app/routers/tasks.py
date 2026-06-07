@@ -1,4 +1,3 @@
-# frontend/src/components/planner/kanbanView.tsx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.schemas import (

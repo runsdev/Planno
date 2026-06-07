@@ -27,6 +27,7 @@ export interface ParseTaskResponse {
   category?: string | null;
   importance?: string | null;
   error?: string | null;
+  tanggal_kegiatan?: string | null;
 }
 
 export interface ScoreTaskResponse {

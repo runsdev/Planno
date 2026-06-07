@@ -21,6 +21,8 @@ class TaskParseResponse(BaseModel):
     category: Optional[str] = None
     importance: Optional[str] = None
     error: Optional[str] = None
+    # FIX 1: Tambahkan field ini agar tidak di-filter out oleh FastAPI response_model
+    tanggal_kegiatan: Optional[str] = Field(None, description="Tanggal pelaksanaan tugas YYYY-MM-DD")
 
 
 # ── Priority Scorer ───────────────────────────────────────────────────────────
@@ -31,6 +33,9 @@ class TaskScoreRequest(BaseModel):
     duration_minutes: Optional[int] = None
     reschedule_count: int = Field(0, ge=0)
     client_now: Optional[str] = Field(None, description="User's local datetime YYYY-MM-DD HH:MM")
+    # FIX 2: Tambahkan category dan type karena wajib dibaca oleh PriorityScorer
+    category: str = Field("Lainnya", description="Akademik | Kerja | Personal | Lainnya atau versi english")
+    type: str = Field("Tugas", description="Tugas | Acara")
 
 
 class TaskScoreResponse(BaseModel):
@@ -38,6 +43,8 @@ class TaskScoreResponse(BaseModel):
     quadrant: str
     urgency: str
     importance: str
+    # Tambahan Opsional (samakan dengan return priority_scorer.py)
+    priority_label: Optional[str] = "Rendah"
 
 
 # ── Onboarding Parser ─────────────────────────────────────────────────────────

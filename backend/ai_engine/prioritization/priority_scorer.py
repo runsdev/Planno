@@ -165,52 +165,49 @@ class PriorityScorer:
             return "low"
 
     def _label_priority(self, score: int, category: str, deadline: str, now: datetime | None = None) -> str:
-        if now is None:
-            now = datetime.now()
-        is_personal = category in ("personal", "Personal")
-        is_lainnya  = category in ("health", "Lainnya")
+            if now is None:
+                now = datetime.now()
+                
+            # Normalisasi nama kategori agar aman (bisa handle indonesia/inggris)
+            cat_lower = str(category).lower()
+            is_personal = cat_lower in ("personal", "health", "lainnya")
 
-        hari_lagi = 999
+            hari_lagi = 999
 
-        if deadline:
-            try:
-                fmt = "%Y-%m-%d" if len(deadline) == 10 else "%Y-%m-%d %H:%M"
-                dt = datetime.strptime(deadline, fmt)
+            if deadline:
+                try:
+                    # Bersihkan string dari kemungkinan format frontend yang aneh
+                    clean_deadline = deadline.strip().replace("T", " ")
+                    if len(clean_deadline) >= 16:
+                        dt = datetime.strptime(clean_deadline[:16], "%Y-%m-%d %H:%M")
+                    else:
+                        dt = datetime.strptime(clean_deadline[:10], "%Y-%m-%d")
 
-                hari_lagi = (dt - now).days
+                    # Hitung selisih hari secara presisi murni tanggal (tanpa efek jam)
+                    hari_lagi = (dt.date() - now.date()).days
+                except:
+                    # Jika gagal parsing, gunakan pendekatan score kotor
+                    if score >= 75: return "Tinggi"
+                    elif score >= 45: return "Sedang"
+                    return "Rendah"
 
-            except:
-                pass
+            # ─── PERSONAL & LAINNYA ─────────────────────────────
+            if is_personal:
+                if hari_lagi <= 0:
+                    return "Tinggi"
+                elif hari_lagi <= 3:
+                    return "Sedang"
+                else:
+                    return "Rendah"
 
-        # ─── PERSONAL & LAINNYA ─────────────────────────────
-        if is_personal or is_lainnya:
-
-            # Hari ini
-            if hari_lagi == 0:
-                return "Tinggi"
-
-            # Besok & Lusa
-            elif hari_lagi <= 3:
-                return "Sedang"
-
-            # > 2 hari
+            # ─── AKADEMIK & KERJA (Default) ─────────────────────
             else:
-                return "Rendah"
-
-        # ─── AKADEMIK & KERJA ───────────────────────────────
-        else:
-
-            # Hari ini & Besok
-            if hari_lagi <= 1:
-                return "Tinggi"
-
-            # Hari ke-3 sampai ke-7
-            elif hari_lagi <= 7:
-                return "Sedang"
-
-            # > 7 hari
-            else:
-                return "Rendah"
+                if hari_lagi <= 1:
+                    return "Tinggi"
+                elif hari_lagi <= 7:
+                    return "Sedang"
+                else:
+                    return "Rendah"
 
     def _klasifikasi_kuadran(self, urgency: float, importance: float) -> str:
         """Klasifikasi ke 4 kuadran Eisenhower."""
