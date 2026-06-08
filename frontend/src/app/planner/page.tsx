@@ -7,23 +7,13 @@ import { KanbanView } from "@/components/planner/kanbanView";
 import { CalendarView } from "@/components/planner/calendarView";
 import { RightSidebar } from "@/components/planner/rightSidebar";
 import { FilterType, Task } from "@/components/planner/plannerTypes";
-// import { INITIAL_TASKS } from "@/components/planner/plannerMockData";
 import { AddTaskModal, ParsedResult } from "@/components/add-task/addTaskModal";
 import { FocusTask } from "@/components/focus/focusModal";
 import { getDeadlineColor } from "@/lib/utils";
 
-type TaskProgress = Record<
-  string,
-  {
-    completedSessions: number;
-    totalFocusSeconds: number;
-  }
->;
+type TaskProgress = Record<string, { completedSessions: number; totalFocusSeconds: number }>;
 
 function parsedToTask(result: ParsedResult): Omit<Task, "id"> {
-  // result.deadlineISO is a naive local-time string like "2026-05-25 14:00".
-  // new Date("2026-05-25T14:00") in the browser interprets it as local time,
-  // so .toISOString() produces the correct UTC representation for DB storage.
   const deadlineUTC = result.deadlineISO
     ? new Date(result.deadlineISO.replace(" ", "T")).toISOString()
     : null;
@@ -63,32 +53,28 @@ function buildOccupiedSlots(tasks: Task[]): Array<{ start: string; end: string }
 
 function PlannerContent() {
   const searchParams = useSearchParams();
-  // const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks]               = useState<Task[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>("Semua");
   const [addModalOpen, setAddModalOpen] = useState(false);
-
-  // Progress fokus per task
   const [taskProgress, setTaskProgress] = useState<TaskProgress>({});
+  const [searchQuery, setSearchQuery]   = useState(""); // ← new
 
   const viewParam = searchParams.get("view");
   const initialView: "Kanban" | "Calendar" =
     viewParam === "Calendar" ? "Calendar" : "Kanban";
-  const [activeView, setActiveView] = useState<"Kanban" | "Calendar">(
-    initialView,
-  );
+  const [activeView, setActiveView] = useState<"Kanban" | "Calendar">(initialView);
 
-  // ── Load tasks from DB ────────────────────────────────────────────────────
+  // ── Load tasks from DB ──────────────────────────────────────────────────────
   useEffect(() => {
     fetch("/api/tasks")
       .then((res) => (res.ok ? res.json() : null))
       .then((data: Task[] | null) => {
         if (data && data.length > 0) setTasks(data);
       })
-      .catch(() => {}); // keep INITIAL_TASKS on error
+      .catch(() => {});
   }, []);
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
+  // ── Mutations ───────────────────────────────────────────────────────────────
 
   const toggleTask = useCallback((id: string) => {
     setTasks((prev) =>
@@ -107,9 +93,8 @@ function PlannerContent() {
 
   const handleAddTask = useCallback(async (result: ParsedResult) => {
     const taskData = parsedToTask(result);
-    // Optimistic: prepend with temp id
     const tempId = `temp-${Date.now()}`;
-    setTasks((prev) => [{ id: tempId, ...taskData }, ...prev]);
+    setTasks((prev: Task[]) => [{ id: tempId, ...taskData }, ...prev]);
 
     try {
       const res = await fetch("/api/tasks", {
@@ -119,7 +104,6 @@ function PlannerContent() {
       });
       if (res.ok) {
         const saved: Task = await res.json();
-        // Replace temp id with real DB id
         setTasks((prev) => prev.map((t) => (t.id === tempId ? saved : t)));
       }
     } catch {
@@ -148,45 +132,26 @@ function PlannerContent() {
 
   const handleMarkComplete = useCallback(
     (taskId: string, totalSeconds: number) => {
-      setTasks((prev) =>
+        setTasks((prev: Task[]) =>
         prev.map((t) =>
           t.id === taskId
             ? { ...t, completed: true, actualSeconds: totalSeconds }
             : t,
         ),
       );
-      setTaskProgress((prev) => {
+      setTaskProgress((prev: TaskProgress) => {
         const next = { ...prev };
         delete next[taskId];
         return next;
       });
-
       fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: true, actualSeconds: totalSeconds }),
+        body: JSON.stringify({ completed: true, actualSeconds: totalSeconds }), 
       }).catch(() => {});
     },
     [],
   );
-
-  const filteredTasks = tasks.filter((task) => {
-    if (activeFilter === "Semua") return true;
-    if (activeFilter === "Belum Selesai") return !task.completed;
-    if (activeFilter === "Selesai") return task.completed;
-    return task.category === activeFilter;
-  });
-
-  const completedTaskIds = tasks.filter((t) => t.completed).map((t) => t.id);
-
-  // Map tasks → FocusTask for the focus modal
-  const focusTasks: FocusTask[] = tasks
-    .filter((t) => !t.completed)
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      priority: t.priority as FocusTask["priority"],
-    }));
 
   const handleEditTask = useCallback(async (updated: Task) => {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -204,12 +169,61 @@ function PlannerContent() {
     } catch {}
   }, []);
 
+  const handleUpdateTask = useCallback(async (id: string, updated: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updated } : t)),
+    );
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method  : "PATCH",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify({
+          ...(updated.title    !== undefined && { title:    updated.title }),
+          ...(updated.category !== undefined && { category: updated.category }),
+          ...(updated.priority !== undefined && { priority: updated.priority }),
+          ...(updated.duration !== undefined && { duration: updated.duration }),
+          ...(updated.deadline !== undefined && { deadline: updated.deadline }),
+        }),
+      });
+    } catch {}
+  }, []);
+
   const handleDeleteTask = useCallback(async (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setTasks((prev: Task[]) => prev.filter((t) => t.id !== id));
     try {
       await fetch(`/api/tasks/${id}`, { method: "DELETE" });
     } catch {}
   }, []);
+
+  // ── Filter + search ─────────────────────────────────────────────────────────
+  // Apply category/status filter first, then search query on top
+  const q = searchQuery.trim().toLowerCase();
+
+  const filteredTasks = tasks
+    .filter((task) => {
+      if (activeFilter === "Semua") return true;
+      if (activeFilter === "Belum Selesai") return !task.completed;
+      if (activeFilter === "Selesai") return task.completed;
+      return task.category === activeFilter;
+    })
+    .filter((task) =>
+      q ? task.title.toLowerCase().includes(q) : true,
+    );
+
+  // Calendar gets all tasks (no category filter) but still respects search
+  const calendarTasks = tasks.filter((task) =>
+    q ? task.title.toLowerCase().includes(q) : true,
+  );
+
+  const completedTaskIds = tasks.filter((t) => t.completed).map((t) => t.id);
+
+  const focusTasks: FocusTask[] = tasks
+    .filter((t) => !t.completed)
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      priority: t.priority as FocusTask["priority"],
+    }));
 
   return (
     <div
@@ -223,11 +237,9 @@ function PlannerContent() {
         taskProgress={taskProgress}
         onSessionFinished={handleSessionFinished}
         completedTaskIds={completedTaskIds}
-        onOpenAddTask={() => {
-          console.log("openAddTask clicked"); 
-          setAddModalOpen(true);
-        }}
+        onOpenAddTask={() => setAddModalOpen(true)}
         tasks={focusTasks}
+        onSearch={setSearchQuery} // ← new
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -240,15 +252,21 @@ function PlannerContent() {
             onFilterChange={setActiveFilter}
             onToggleTask={toggleTask}
             onOpenAddTask={() => setAddModalOpen(true)}
-            onEditTask={handleEditTask} 
+            onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}
           />
         </div>
+
         <div
           className={`flex flex-1 overflow-hidden ${activeView !== "Calendar" ? "hidden" : ""}`}
         >
-          <CalendarView tasks={tasks} />
+          <CalendarView
+            tasks={calendarTasks} // ← uses search-filtered list
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+          />
         </div>
+
         <RightSidebar tasks={tasks} />
       </div>
 

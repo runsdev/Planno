@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Circle, Plus, Clock, Pencil, Trash2 } from "lucide-react"; // ← tambah Pencil, Trash2
+import { CheckCircle2, Circle, Plus, Clock, Pencil, Trash2, Flag } from "lucide-react"; 
 import { Task, Priority, FilterType, FILTERS } from "./plannerTypes";
 import { PRIORITY_META, CATEGORY_META } from "./plannerStyles";
 import { formatDeadline } from "@/lib/utils";
-import { EditTaskModal } from "@/components/add-task/editTaskModal"; // ← tambah import
+import { EditTaskModal } from "@/components/add-task/editTaskModal";
 
 function formatActualTime(seconds: number): string {
+  if (!seconds || seconds <= 0) return "";
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
   if (h > 0 && m > 0) return `${h} jam ${m} mnt`;
   if (h > 0) return `${h} jam`;
   if (m > 0) return `${m} mnt`;
-  return "";
+  return `${s} dtk`; 
 }
 
 // ─── Task card ────────────────────────────────────────────────────────────────
@@ -32,9 +34,17 @@ function TaskCard({
   const cat = CATEGORY_META[task.category];
   const deadlineColor = task.deadlineColor ?? "text-[#5d5d5a]";
 
+  const deadlineText = formatDeadline(task.deadline);
+  const isHariH = deadlineText.includes("Hari ini") || deadlineText.includes("Terlambat");
+  
+  const flagColor = isHariH ? "text-[#e07b72]" : "text-[#5d5d5a]/40";
+  const currentDeadlineTextColor = isHariH 
+    ? "text-[#e07b72] font-semibold" 
+    : (task.completed ? "text-[#5d5d5a]/40" : deadlineColor);
+
   return (
     <div
-      className={`bg-white rounded-[14.5px] shadow-[0px_1px_4px_0px_rgba(33,33,33,0.08)] border-l-8 ${PRIORITY_META[task.priority].borderLeft} transition-opacity duration-200 ${task.completed ? "opacity-55" : ""}`}
+      className={`bg-white rounded-[14.5px] shadow-[0px_1px_4px_0px_rgba(33,33,33,0.08)] border-l-8 ${cat.borderLeft} transition-opacity duration-200 ${task.completed ? "opacity-55" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -79,14 +89,23 @@ function TaskCard({
           )}
         </div>
 
-        {/* Deadline + duration */}
-        <div className="flex items-center gap-1.5 pl-7">
-          <span className={`text-[10.5px] font-normal ${task.completed ? "text-[#5d5d5a]/40" : deadlineColor}`}>
-            {formatDeadline(task.deadline)}
-          </span>
-          <span className="text-[10.5px] font-normal text-[#6b6b6b] bg-[#f7f6fb] rounded-full px-1.75 py-[1.75px]">
-            {task.duration}
-          </span>
+        {/* Deadline + duration row (Clean Text Only) */}
+        <div className="flex items-center gap-3 pl-7 flex-wrap">
+          {/* Info Deadline */}
+          <div className="flex items-center gap-1 shrink-0">
+            <Flag className={`w-3.5 h-3.5 ${task.completed ? "text-[#5d5d5a]/20" : flagColor}`} />
+            <span className={`text-[10.5px] ${currentDeadlineTextColor}`}>
+              {deadlineText}
+            </span>
+          </div>
+
+          {/* Info Durasi — Polos tanpa background badge */}
+          <div className="flex items-center gap-1 shrink-0">
+            <Clock className="w-3.5 h-3.5 text-[#5d5d5a]/30" />
+            <span className="text-[10.5px] font-normal text-[#6b6b6b]">
+              {task.duration}
+            </span>
+          </div>
         </div>
 
         {/* Category badge */}
@@ -96,7 +115,7 @@ function TaskCard({
           </span>
         </div>
 
-        {task.completed && task.actualSeconds !== undefined && (
+        {task.completed && task.actualSeconds !== undefined && task.actualSeconds > 0 && (
           <div className="pl-7 flex items-center gap-1">
             <Clock className="w-2.75 h-2.75 text-[#6bab7e]" />
             <span className="text-[10.5px] font-medium text-[#6bab7e]">
