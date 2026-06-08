@@ -24,22 +24,19 @@ export async function PATCH(
     where: { id },
     data: {
       ...(body.completed !== undefined && { completed: body.completed }),
-      ...(body.completed === true && { completedAt: new Date() }),
+      ...(body.completed === true  && { completedAt: new Date() }),
       ...(body.completed === false && { completedAt: null }),
-      ...(body.actualSeconds !== undefined && {
-        actualSeconds: body.actualSeconds,
-      }),
-      ...(body.rescheduleCount !== undefined && {
-        rescheduleCount: body.rescheduleCount,
-      }),
-      ...(body.title !== undefined && { title: body.title }),
+      ...(body.actualSeconds   !== undefined && { actualSeconds: body.actualSeconds }),
+      ...(body.rescheduleCount !== undefined && { rescheduleCount: body.rescheduleCount }),
+      ...(body.title    !== undefined && { title: body.title }),
+      ...(body.priority !== undefined && { priority: body.priority }),
+      ...(body.category !== undefined && { category: body.category }),
+      ...(body.duration !== undefined && { duration: body.duration }), // ← tambah ini
       ...(body.deadline !== undefined && {
         deadline: body.deadline
           ? new Date(body.deadline.replace(" ", "T"))
           : null,
       }),
-      ...(body.priority !== undefined && { priority: body.priority }),
-      ...(body.category !== undefined && { category: body.category }),
     },
   });
 

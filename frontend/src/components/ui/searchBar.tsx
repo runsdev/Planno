@@ -3,7 +3,11 @@
 import { Search, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-export function SearchBar() {
+interface SearchBarProps {
+  onSearch?: (query: string) => void;
+}
+
+export function SearchBar({ onSearch }: SearchBarProps) {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -12,9 +16,15 @@ export function SearchBar() {
     if (expanded) inputRef.current?.focus();
   }, [expanded]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    onSearch?.(e.target.value);
+  };
+
   const handleCollapse = () => {
     setExpanded(false);
     setQuery("");
+    onSearch?.(""); 
   };
 
   if (expanded) {
@@ -25,7 +35,7 @@ export function SearchBar() {
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleChange}
           placeholder="Cari tugas..."
           className="flex-1 bg-transparent text-[12.25px] text-[#212121] placeholder:text-[#5d5d5a]/40 outline-none"
         />

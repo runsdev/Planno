@@ -18,12 +18,27 @@ export const PRIORITY_META: Record<Priority, {
   },
 };
 
-export const CATEGORY_META: Record<Category, { bg: string; text: string }> = {
-  Akademik: { bg: "bg-[#f8e5e5]",             text: "text-[#e07b72]" },
-  Kerja:    { bg: "bg-[#def1d0]",             text: "text-[#3d6b35]" },
-  Personal: { bg: "bg-[#cbceea]",             text: "text-[#5d65b2]" },
-  // Fix: Lainnya menggunakan gray eksplisit agar tidak terkena Tailwind purge
-  Lainnya:  { bg: "bg-[rgba(93,93,90,0.15)]", text: "text-[#5d5d5a]" },
+export const CATEGORY_META: Record<Category, { bg: string; text: string; borderLeft: string }> = {
+  Akademik: { 
+    bg: "bg-[#f8e5e5]", 
+    text: "text-[#e07b72]", 
+    borderLeft: "border-l-[#f8e5e5]" 
+  },
+  Kerja: { 
+    bg: "bg-[#def1d0]", 
+    text: "text-[#3d6b35]", 
+    borderLeft: "border-l-[#def1d0]" 
+  },
+  Personal: { 
+    bg: "bg-[#cbceea]", 
+    text: "text-[#5d65b2]", 
+    borderLeft: "border-l-[#cbceea]" 
+  },
+  Lainnya: { 
+    bg: "bg-[rgba(93,93,90,0.15)]", 
+    text: "text-[#5d5d5a]", 
+    borderLeft: "border-l-[rgba(93,93,90,0.3)]" 
+  },
 };
 
 export const PRIORITY_SIDEBAR_BADGE: Record<Priority, { bg: string; border: string; text: string }> = {
@@ -32,11 +47,12 @@ export const PRIORITY_SIDEBAR_BADGE: Record<Priority, { bg: string; border: stri
   Rendah: { bg: "bg-[rgba(222,241,208,0.6)]", border: "border border-[#6bab7e]", text: "text-[#6bab7e]" },
 };
 
+// Modifikasi warna di bawah ini agar sesuai dengan palet request-mu
 export const CAL_COLOR: Record<CalendarEvent["color"], {
   bg: string; border: string; titleText: string; timeText: string;
 }> = {
-  red:   { bg: "bg-[rgba(248,232,233,0.95)]", border: "border-l-[#e07b72]",           titleText: "text-[#5d5d5a]", timeText: "text-[#e07b72]" },
-  blue:  { bg: "bg-[rgba(205,235,241,0.95)]", border: "border-l-[#4a6fa5]",           titleText: "text-[#5d5d5a]", timeText: "text-[#4a6fa5]" },
-  green: { bg: "bg-[rgba(222,241,208,0.95)]", border: "border-l-[#6bab7e]",           titleText: "text-[#5d5d5a]", timeText: "text-[#6bab7e]" },
-  gray:  { bg: "bg-[rgba(220,220,218,0.95)]", border: "border-l-[rgba(93,93,90,0.7)]", titleText: "text-[#5d5d5a]", timeText: "text-[#5d5d5a]" },
+  red:   { bg: "bg-[rgba(248,229,229,0.95)]", border: "border-l-[#e07b72]",           titleText: "text-[#5d5d5a]", timeText: "text-[#e07b72]" }, // Pink (Akademik)
+  blue:  { bg: "bg-[rgba(222,241,208,0.95)]", border: "border-l-[#3d6b35]",           titleText: "text-[#5d5d5a]", timeText: "text-[#3d6b35]" }, // Hijau (Kerja)
+  green: { bg: "bg-[rgba(203,206,234,0.95)]", border: "border-l-[#5d65b2]",           titleText: "text-[#5d5d5a]", timeText: "text-[#5d65b2]" }, // Ungu (Personal)
+  gray:  { bg: "bg-[rgba(220,220,218,0.95)]", border: "border-l-[rgba(93,93,90,0.7)]", titleText: "text-[#5d5d5a]", timeText: "text-[#5d5d5a]" }, // Abu (Lainnya)
 };

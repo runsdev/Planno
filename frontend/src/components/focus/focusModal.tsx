@@ -192,6 +192,10 @@ export function FocusModal({
   const canMarkDone = !!selectedTask && progress.completedSessions > 0;
   const canStartTimer = !!selectedTask;
 
+  const canFinishSession =
+  !!selectedTask &&
+  (phase === "break" || isRunning || currentSessionSeconds > 0);
+
   if (!open) return null;
 
   return (
@@ -266,19 +270,17 @@ export function FocusModal({
           <button
             type="button"
             onClick={handleFinishSession}
-            disabled={!selectedTask}
+            disabled={!canFinishSession}
             className={`w-full h-10 rounded-[10.5px] text-[13px] font-semibold border transition-colors cursor-pointer
               ${
-                selectedTask
+                canFinishSession
                   ? phase === "focus"
                     ? "bg-white border-[#e07b72] text-[#e07b72] hover:bg-[#fdecea]"
                     : "bg-white border-[#6bab7e] text-[#6bab7e] hover:bg-[rgba(222,241,208,0.4)]"
                   : "bg-white border-[rgba(93,93,90,0.15)] text-[#5d5d5a]/30 cursor-not-allowed"
               }`}
           >
-            {phase === "focus"
-              ? "Selesaikan Sesi Fokus"
-              : "Selesaikan Istirahat"}
+            {phase === "focus" ? "Selesaikan Sesi Fokus" : "Selesaikan Istirahat"}
           </button>
 
           <button

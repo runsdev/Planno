@@ -58,14 +58,12 @@ type NavbarProps = {
   activeView?: "Kanban" | "Calendar";
   onViewChange?: (view: "Kanban" | "Calendar") => void;
   onMarkComplete?: (taskId: string, totalSeconds: number) => void;
-  taskProgress?: Record<
-    string,
-    { completedSessions: number; totalFocusSeconds: number }
-  >;
+  taskProgress?: Record<string, { completedSessions: number; totalFocusSeconds: number }>;
   onSessionFinished?: (taskId: string, addedSeconds: number) => void;
   completedTaskIds?: string[];
   onOpenAddTask?: () => void;
   tasks?: FocusTask[];
+  onSearch?: (query: string) => void;
 };
 
 export function Navbar({
@@ -77,6 +75,7 @@ export function Navbar({
   completedTaskIds = [],
   onOpenAddTask,
   tasks = [],
+  onSearch,
 }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -137,7 +136,7 @@ export function Navbar({
         <div className="flex items-center gap-2 shrink-0">
           {!isSettings && (
             <>
-              <SearchBar />
+              <SearchBar onSearch={onSearch} />
 
               <button
                 type="button"
@@ -148,7 +147,6 @@ export function Navbar({
               </button>
 
               <div className="flex items-center gap-1.5">
-                {/* Timer → buka focus modal */}
                 <button
                   type="button"
                   onClick={() => setFocusModalOpen(true)}
@@ -179,7 +177,6 @@ export function Navbar({
         </div>
       </header>
 
-      {/* Modals rendered outside header */}
       <FocusModal
         open={focusModalOpen}
         onClose={() => setFocusModalOpen(false)}

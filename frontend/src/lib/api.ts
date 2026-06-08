@@ -27,6 +27,7 @@ export interface ParseTaskResponse {
   category?: string | null;
   importance?: string | null;
   error?: string | null;
+  tanggal_kegiatan?: string | null;
 }
 
 export interface ScoreTaskResponse {
@@ -35,6 +36,13 @@ export interface ScoreTaskResponse {
   priority_label?: string | null; // ← tambah ini
   urgency: string;
   importance: string;
+}
+
+export interface CheckSlotResponse {
+  has_conflict: boolean;
+  original_start: string;
+  suggested_start: string | null;
+  suggested_end: string | null;
 }
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
@@ -106,6 +114,12 @@ export const api = {
 
   simpleBriefing: (data: { user_name: string; top_tasks: BriefingTask[] }) =>
     post<{ briefing_text: string }>("/api/briefing/simple", data),
+
+    checkSlot: (data: {
+      proposed_start: string;
+      duration_minutes: number;
+      occupied_slots: Array<{ start: string; end: string }>;
+    }) => post<CheckSlotResponse>("/api/tasks/check-slot", data),
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
